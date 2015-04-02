@@ -20,14 +20,8 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback {
     List<Size> mSupportedPreviewSizes;
     Camera mCamera;
 
-    Preview(Context context, SurfaceView sv) {
+    Preview(Context context) {
         super(context);
-
-        mSurfaceView = sv;
-
-        mHolder = mSurfaceView.getHolder();
-        mHolder.addCallback(this);
-        mHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
     }
 
     public void setCamera(Camera camera) {

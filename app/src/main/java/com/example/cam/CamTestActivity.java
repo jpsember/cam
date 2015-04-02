@@ -17,11 +17,11 @@ import android.os.Environment;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.ViewGroup.LayoutParams;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.FrameLayout;
 import android.widget.Toast;
+
+import com.js.android.UITools;
 
 import static com.js.basic.Tools.*;
 import static com.js.android.AndroidTools.*;
@@ -34,11 +34,17 @@ public class CamTestActivity extends Activity {
     requestWindowFeature(Window.FEATURE_NO_TITLE);
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
-    setContentView(R.layout.main);
+    // Construct a SurfaceView
+    SurfaceView surfaceView = new SurfaceView(this);
 
-    mPreview = new Preview(this, (SurfaceView) findViewById(R.id.surfaceView));
-    mPreview.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
-    ((FrameLayout) findViewById(R.id.layout)).addView(mPreview);
+    // Construct a preview ViewGroup; it will contain the SurfaceView
+    mPreview = new Preview(this);
+    mPreview.addView(surfaceView);
+
+    surfaceView.getHolder().addCallback(mPreview);
+
+    setContentView(mPreview);
+
     mPreview.setKeepScreenOn(true);
 
     mPreview.setOnClickListener(new OnClickListener() {
@@ -143,7 +149,4 @@ public class CamTestActivity extends Activity {
 
   private Preview mPreview;
   private Camera mCamera;
-
 }
-
-
