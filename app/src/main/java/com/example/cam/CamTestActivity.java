@@ -19,6 +19,7 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
@@ -46,15 +47,22 @@ public class CamTestActivity extends Activity {
 
     // Construct a linear layout that contains the Camera view, and some other views as well
     LinearLayout container = UITools.linearLayout(this, false);
-    container.setBackgroundColor(Color.GRAY);
-    container.setPadding(20, 20, 20, 20);
 
-    container.addView(mPreview, UITools.layoutParams(container, 1.0f));
+    FrameLayout cameraViewContainer = new FrameLayout(this);
+    {
+      cameraViewContainer.setBackgroundColor(Color.GRAY);
+      cameraViewContainer.setPadding(20, 20, 20, 20);
+      cameraViewContainer.addView(mPreview);
+    }
 
-    View blankView = new View(this);
-    blankView.setBackgroundColor(Color.GREEN);
-    container.addView(blankView, UITools.layoutParams(container, 1.0f));
+    // Have the camera view container and a dummy view share the screen side by side
+    container.addView(cameraViewContainer, UITools.layoutParams(container, 1.0f));
 
+    {
+      View blankView = new View(this);
+      blankView.setBackgroundColor(Color.GREEN);
+      container.addView(blankView, UITools.layoutParams(container, 1.0f));
+    }
     return container;
   }
 
