@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Color;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Camera.ShutterCallback;
@@ -18,7 +19,10 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.LinearLayout;
 import android.widget.Toast;
+
+import com.js.android.UITools;
 
 import static com.js.basic.Tools.*;
 import static com.js.android.AndroidTools.*;
@@ -31,23 +35,38 @@ public class CamTestActivity extends Activity {
     requestWindowFeature(Window.FEATURE_NO_TITLE);
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
-     // Construct a preview ViewGroup; it will contain the SurfaceView
+    setContentView(buildContentView());
+
+
+    Toast.makeText(this, getString(R.string.take_photo_help), Toast.LENGTH_LONG).show();
+  }
+
+  private View buildContentView() {
+    buildCameraView();
+
+    // Construct a linear layout that contains the Camera view, and some other views as well
+    LinearLayout container = UITools.linearLayout(this, false);
+    container.setBackgroundColor(Color.GRAY);
+    container.setPadding(20, 20, 20, 20);
+
+    container.addView(mPreview, UITools.layoutParams(container, 1.0f));
+
+    View blankView = new View(this);
+    blankView.setBackgroundColor(Color.GREEN);
+    container.addView(blankView, UITools.layoutParams(container, 1.0f));
+
+    return container;
+  }
+
+  private void buildCameraView() {
     mPreview = new CameraView(this);
-
-    setContentView(mPreview);
-
     mPreview.setKeepScreenOn(true);
-
     mPreview.setOnClickListener(new OnClickListener() {
-
       @Override
       public void onClick(View arg0) {
         mCamera.takePicture(shutterCallback, rawCallback, jpegCallback);
       }
     });
-
-
-    Toast.makeText(this, getString(R.string.take_photo_help), Toast.LENGTH_LONG).show();
   }
 
   @Override

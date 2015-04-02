@@ -6,4 +6,5 @@
 /build
 .commit_cache
 app/app.iml
+app/build
 
