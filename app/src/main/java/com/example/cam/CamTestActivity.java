@@ -20,8 +20,6 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Toast;
 
-import com.js.android.UITools;
-
 import static com.js.basic.Tools.*;
 import static com.js.android.AndroidTools.*;
 
@@ -34,7 +32,7 @@ public class CamTestActivity extends Activity {
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
      // Construct a preview ViewGroup; it will contain the SurfaceView
-    mPreview = new Preview(this);
+    mPreview = new CameraView(this);
 
     setContentView(mPreview);
 
@@ -140,6 +138,6 @@ public class CamTestActivity extends Activity {
 
   }
 
-  private Preview mPreview;
+  private CameraView mPreview;
   private Camera mCamera;
 }
