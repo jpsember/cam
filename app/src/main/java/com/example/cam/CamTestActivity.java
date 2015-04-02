@@ -14,7 +14,6 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
-import android.view.SurfaceView;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.Window;
@@ -34,14 +33,8 @@ public class CamTestActivity extends Activity {
     requestWindowFeature(Window.FEATURE_NO_TITLE);
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
-    // Construct a SurfaceView
-    SurfaceView surfaceView = new SurfaceView(this);
-
-    // Construct a preview ViewGroup; it will contain the SurfaceView
+     // Construct a preview ViewGroup; it will contain the SurfaceView
     mPreview = new Preview(this);
-    mPreview.addView(surfaceView);
-
-    surfaceView.getHolder().addCallback(mPreview);
 
     setContentView(mPreview);
 
