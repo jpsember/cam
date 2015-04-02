@@ -1,0 +1,72 @@
+package com.js.basic;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.JSONTokener;
+
+public class JSONTools {
+
+  /**
+   * Parse a JSON map from a string
+   */
+  public static JSONObject parseMap(String source) throws JSONException {
+    return (JSONObject) new JSONTokener(source).nextValue();
+  }
+
+  /**
+   * Parse a JSON array from a string
+   */
+  public static JSONArray parseArray(String source) throws JSONException {
+    return (JSONArray) new JSONTokener(source).nextValue();
+  }
+
+  /**
+   * Get keys from JSONObject as an Iterable<String>
+   */
+  public static Iterable<String> keys(JSONObject object) {
+    return toList(object.keys());
+  }
+
+  /**
+   * Get Iterable from Set<String>
+   */
+  public static Iterable<String> iterable(Set<String> set) {
+    return toList(set.iterator());
+  }
+
+  /**
+   * Construct a list from an iterator
+   */
+  private static <T> List<T> toList(Iterator<T> iter) {
+    List list = new ArrayList();
+    while (iter.hasNext())
+      list.add(iter.next());
+    return list;
+  }
+
+  /**
+   * Store a float within a JSON array as a (long) integer, preserving 3 decimal
+   * places
+   */
+  public static void put(JSONArray array, float floatValue)
+      throws JSONException {
+    long intValue = (long) (floatValue * 1000);
+    array.put(intValue);
+  }
+
+  /**
+   * Retrieve float from JSON array stored via put()
+   */
+  public static float getFloat(JSONArray array, int cursor)
+      throws JSONException {
+    long intValue = array.getLong(cursor);
+    return ((float) intValue) / 1000;
+  }
+
+}
