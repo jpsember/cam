@@ -1,4 +1,4 @@
-package com.example.cam;
+package com.js.camera;
 
 import java.io.IOException;
 import java.util.List;
@@ -180,5 +180,4 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
   private Size mPreviewSize;
   private MyCamera mCamera;
   private SurfaceHolder mHolder;
-
 }

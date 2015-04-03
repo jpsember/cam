@@ -1,4 +1,4 @@
-package com.example.cam;
+package com.js.camera;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -26,6 +26,7 @@ import android.widget.Toast;
 import com.js.android.AndroidTools;
 import com.js.android.AppPreferences;
 import com.js.android.UITools;
+import com.js.camera.camera.R;
 
 import static com.js.basic.Tools.*;
 import static com.js.android.AndroidTools.*;

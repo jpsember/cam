@@ -1,12 +1,10 @@
-package com.example.cam;
+package com.js.camera;
 
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.LinearLayout;
 
 import com.js.android.UITools;
-
-import static com.js.basic.Tools.*;
 
 /**
  * A view that toggles between large and small size when touched
