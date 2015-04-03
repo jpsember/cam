@@ -22,7 +22,7 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
   public CameraPreview(Context context, MyCamera camera) {
     super(context);
     ASSERT(camera != null);
-    setTrace(true);
+//    setTrace(true);
     mCamera = camera;
     addSurfaceView();
     mHolder.addCallback(this);
@@ -97,15 +97,8 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
     trace("surfaceChanged(), camera.isOpen=" + d(mCamera.isOpen()) + " mPreviewSize=" + mPreviewSize);
     if (!mCamera.isOpen())
       return;
-
-    ASSERT(mPreviewSize != null);
-
-    Camera c = mCamera.camera();
-
-    Camera.Parameters parameters = c.getParameters();
-    parameters.setPreviewSize(mPreviewSize.x, mPreviewSize.y);
+    mCamera.setPreviewSize(mPreviewSize);
     requestLayout();
-    c.setParameters(parameters);
 
     // Important: Call startPreview() to start updating the preview surface.
     // Preview must be started before you can take a picture.

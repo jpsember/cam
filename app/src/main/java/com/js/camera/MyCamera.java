@@ -169,6 +169,14 @@ public class MyCamera {
     return output;
   }
 
+  public void setPreviewSize(IPoint mPreviewSize) {
+    assertOpen();
+    Camera.Parameters parameters = mCamera.getParameters();
+    parameters.setPreviewSize(mPreviewSize.x, mPreviewSize.y);
+    mCamera.setParameters(parameters);
+  }
+
+
   @Override
   public String toString() {
     return "MyCamera, open=" + d(isOpen()) + " id=" + d(mCameraId);
