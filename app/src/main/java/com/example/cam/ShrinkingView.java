@@ -5,6 +5,7 @@ import android.view.View;
 import android.widget.LinearLayout;
 
 import com.js.android.UITools;
+
 import static com.js.basic.Tools.*;
 
 /**
@@ -30,10 +31,13 @@ public class ShrinkingView extends View implements View.OnTouchListener {
     addToContainer();
   }
 
+  private static final float sStateWeights[] = {1.0f, 1.5f, 2.0f,
+      3.0f, 2.2f, 1.2f, .8f, .5f, .2f};
+
   @Override
   public boolean onTouch(View v, MotionEvent event) {
     if (event.getActionMasked() == MotionEvent.ACTION_UP) {
-      mGreenViewCollapsed ^= true;
+      mViewState = (mViewState + 1) % sStateWeights.length;
       addToContainer();
     }
     return true;
@@ -45,13 +49,12 @@ public class ShrinkingView extends View implements View.OnTouchListener {
    */
   private void addToContainer() {
     LinearLayout.LayoutParams param = UITools.layoutParams(mGreenViewContainer,
-        mNormalWeight * (mGreenViewCollapsed ? .3f : 1.0f));
-    pr("Replacing ShrinkingView "+nameOf(this)+" within its container");
+        mNormalWeight * sStateWeights[mViewState]);
     mGreenViewContainer.removeView(this);
     mGreenViewContainer.addView(this, mPositionInParent, param);
   }
 
-  private boolean mGreenViewCollapsed;
+  private int mViewState;
   private LinearLayout mGreenViewContainer;
   private float mNormalWeight;
   private int mPositionInParent;

@@ -64,9 +64,9 @@ public class CameraActivity extends Activity {
     }
 
     // Have the camera view container and the shriking views share the screen side by side
-    ShrinkingView.build(container, 1.2f);
+    ShrinkingView.build(container, 1.0f);
     container.addView(cameraViewContainer, UITools.layoutParams(container, 1.0f));
-    ShrinkingView.build(container, 0.8f);
+    ShrinkingView.build(container, 1.0f);
 
     return container;
   }
@@ -118,8 +118,9 @@ public class CameraActivity extends Activity {
   PictureCallback jpegCallback = new PictureCallback() {
     public void onPictureTaken(byte[] data, Camera camera) {
       new SaveImageTask().execute(data);
-//      resetCam();
       pr("onPictureTaken - jpeg");
+      mMyCamera.startPreview();
+
     }
   };
 

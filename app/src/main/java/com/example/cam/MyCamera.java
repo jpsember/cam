@@ -41,8 +41,6 @@ public class MyCamera {
         mCameraId = preferredCameraId;
         trace("attempting to Camera.open(" + preferredCameraId + ")");
         mCamera = Camera.open(preferredCameraId);
-        warning("maybe don't do this yet");
-        mCamera.startPreview();
       } catch (RuntimeException e) {
         warning("Failed to open camera #" + preferredCameraId + ":\n" + e);
       }
@@ -51,6 +49,20 @@ public class MyCamera {
 
   public boolean isOpen() {
     return mCamera != null;
+  }
+
+  public void startPreview() {
+    trace("startPreview(); " + this);
+    if (!isOpen())
+      return;
+    mCamera.startPreview();
+  }
+
+  public void stopPreview() {
+    trace("stopPreview(); " + this);
+    if (!isOpen())
+      return;
+    mCamera.stopPreview();
   }
 
   public void close() {

@@ -11,6 +11,8 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.js.basic.IPoint;
+
 import static com.js.basic.Tools.*;
 
 public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
@@ -54,16 +56,18 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
 
   @Override
   protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-    trace("onMeasure()");
     // We purposely disregard child measurements because act as a
     // wrapper to a SurfaceView that centers the mCamera preview instead
     // of stretching it.
     int width = resolveSize(getSuggestedMinimumWidth(), widthMeasureSpec);
     int height = resolveSize(getSuggestedMinimumHeight(), heightMeasureSpec);
     setMeasuredDimension(width, height);
-    trace("setMeasuredDimension to " + width + " x " + height);
+    trace("onMeasure, setMeasuredDimension to " + width + " x " + height);
 
-    if (mCamera.isOpen()) {
+    // Don't calculate optimal size if either dimension is zero;
+    // the layout is probably in an intermediate state due to a view
+    // being added or removed
+    if (mCamera.isOpen() && width > 0 && height > 0) {
       getOptimalPreviewSize(width, height);
     }
   }
@@ -129,53 +133,44 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
 
     // Important: Call startPreview() to start updating the preview surface.
     // Preview must be started before you can take a picture.
-    c.startPreview();
+    mCamera.startPreview();
   }
 
   @Override
   public void surfaceDestroyed(SurfaceHolder holder) {
     trace("surfaceDestroyed(), camera.isOpen=" + d(mCamera.isOpen()));
     // Surface will be destroyed when we return, so stop the preview.
-    if (mCamera.isOpen())
-      mCamera.camera().stopPreview();
-  }
+    mCamera.stopPreview();
+   }
 
   private static float aspectRatio(int width, int height) {
     return width / (float) height;
   }
 
-  private void getOptimalPreviewSize(int width, int height) {
+  private void getOptimalPreviewSize(int targetWidth, int targetHeight) {
+    trace("getOptimalPreviewSize, target " + new IPoint(targetWidth, targetHeight));
+    if (targetWidth == 0 || targetHeight == 0)
+      throw new IllegalArgumentException();
+
     Camera.Parameters parameters = mCamera.camera().getParameters();
     List<Size> sizes = parameters.getSupportedPreviewSizes();
     Size optimalSize = null;
 
-    float targetRatio = aspectRatio(width, height);
-
-    int minHeightError = Integer.MAX_VALUE / 10;
-
-    int targetHeight = height;
-
-    // I think the aim here was to find a preview size whose height is closest
-    // to the view's height, omitting those whose aspect ratios are too different.
-
-    // Perform two passes: on the first pass, omit candidates whose aspect ratios
-    // are too different.
-
+    // Choose the largest preview size that will fit within our available view.
+    // Do two passes.  On the first pass, omit any preview sizes that are larger
+    // than the target in either dimension
     for (int pass = 0; pass < 2; pass++) {
+      int minError = Integer.MAX_VALUE / 10;
       for (Size size : sizes) {
-        trace("pass " + pass + ", size " + d(size.width) + " x " + d(size.height));
-        if (pass == 0) {
-          float ratio = aspectRatio(size.width, size.height);
-          float ASPECT_TOLERANCE = 0.1f;
-          trace("  aspect ratio " + d(ratio) + " vs target " + d(targetRatio));
-          if (Math.abs(ratio - targetRatio) > ASPECT_TOLERANCE)
-            continue;
-        }
-        int heightError = Math.abs(size.height - targetHeight);
-        if (heightError < minHeightError) {
+        int widthError = size.width - targetWidth;
+        int heightError = size.height - targetHeight;
+        if (pass == 0 && (widthError > 0 || heightError > 0))
+          continue;
+
+        int error = Math.min(Math.abs(heightError), Math.abs(widthError));
+        if (error < minError) {
           optimalSize = size;
-          minHeightError = heightError;
-          trace("  setting optimal (height error " + heightError + ")");
+          minError = error;
         }
       }
       if (optimalSize != null)
@@ -184,9 +179,8 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
 
     if (optimalSize == null)
       throw new IllegalStateException();
-    trace("set preview size");
-
     mPreviewSize = optimalSize;
+    trace("set preview size to " + new IPoint(mPreviewSize.width, mPreviewSize.height));
   }
 
   public void setTrace(boolean state) {

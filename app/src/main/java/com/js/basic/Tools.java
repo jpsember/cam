@@ -1129,7 +1129,7 @@ public final class Tools {
         "h:mm:ss");
     String strTime = simpleDateFormat.format(cal.getTime());
     for (int i = 0; i < 40; i++)
-      pr("");
+      pr(" ");
     // Print the prefix "!!START!!" as a message to mylogcat (https://github.com/jpsember/mylogcat)
     pr("!!START!!--------------- Start of " + app.getClass().getSimpleName()
         + " ----- " + strTime + " -------------\n\n\n");
