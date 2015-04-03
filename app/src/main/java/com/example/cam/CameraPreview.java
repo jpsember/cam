@@ -24,7 +24,7 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
   public CameraPreview(Context context, MyCamera camera) {
     super(context);
     ASSERT(camera != null);
-    setTrace(true);
+//    setTrace(true);
     mCamera = camera;
     addSurfaceView();
     mHolder.addCallback(this);
@@ -34,24 +34,6 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
     SurfaceView surfaceView = new SurfaceView(this.getContext());
     mHolder = surfaceView.getHolder();
     addView(surfaceView);
-  }
-
-  public void setCamera() {
-    trace("setCamera(), currently " + mCamera);
-    if (!mCamera.isOpen())
-      return;
-    mCamera.close();
-
-    requestLayout();
-
-    try {
-      mCamera.setCameraDisplayOrientation();
-      mCamera.camera().setPreviewDisplay(mHolder);
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-
-    mCamera.camera().startPreview();
   }
 
   @Override

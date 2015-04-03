@@ -41,6 +41,10 @@ public class MyCamera {
         mCameraId = preferredCameraId;
         trace("attempting to Camera.open(" + preferredCameraId + ")");
         mCamera = Camera.open(preferredCameraId);
+
+        // The display is rotated correctly, but the aspect ratio is squashed now
+        setCameraDisplayOrientation();
+
       } catch (RuntimeException e) {
         warning("Failed to open camera #" + preferredCameraId + ":\n" + e);
       }
@@ -86,7 +90,8 @@ public class MyCamera {
     return mCamera;
   }
 
-  public void setCameraDisplayOrientation() {
+  private void setCameraDisplayOrientation() {
+    trace("setCameraDisplayOrientation()");
     if (!isOpen())
       return;
     Camera.CameraInfo info =
