@@ -19,8 +19,8 @@ public class MyCamera {
     doNothingAndroid();
   }
 
-  public void load() {
-    trace("load()");
+  public void open() {
+    trace("open()");
 
     // Prefer a front-facing camera; if not found, use first (if there is one)
     int preferredCameraId = -1;
@@ -39,10 +39,10 @@ public class MyCamera {
     if (preferredCameraId >= 0) {
       try {
         mCameraId = preferredCameraId;
+        trace("attempting to Camera.open(" + preferredCameraId + ")");
         mCamera = Camera.open(preferredCameraId);
         warning("maybe don't do this yet");
         mCamera.startPreview();
-//        mPreview.setCamera(this, mCamera, mCameraId);
       } catch (RuntimeException e) {
         warning("Failed to open camera #" + preferredCameraId + ":\n" + e);
       }
@@ -75,7 +75,8 @@ public class MyCamera {
   }
 
   public void setCameraDisplayOrientation() {
-    if (!isOpen()) return;
+    if (!isOpen())
+      return;
     Camera.CameraInfo info =
         new Camera.CameraInfo();
     Camera.getCameraInfo(mCameraId, info);
@@ -104,6 +105,7 @@ public class MyCamera {
     } else {  // back-facing
       result = (info.orientation - degrees + 360) % 360;
     }
+    trace("setCameraDisplayOrientation to " + result);
     mCamera.setDisplayOrientation(result);
   }
 
@@ -115,9 +117,13 @@ public class MyCamera {
 
   private void trace(Object msg) {
     if (mTrace)
-      pr("---MyCamera---: " + msg);
+      pr("--      MyCamera --: " + msg);
   }
 
+  @Override
+  public String toString() {
+    return "MyCamera, open=" + d(isOpen()) + " id=" + d(mCameraId);
+  }
 
   private Camera mCamera;
   private int mCameraId;

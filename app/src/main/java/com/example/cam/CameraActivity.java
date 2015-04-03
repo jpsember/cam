@@ -15,7 +15,6 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.Window;
@@ -88,7 +87,7 @@ public class CameraActivity extends Activity {
   @Override
   protected void onResume() {
     super.onResume();
-    mMyCamera.load();
+    mMyCamera.open();
     if (!mMyCamera.isOpen())
       AndroidTools.toast(this, "Could not open any cameras");
   }
@@ -97,11 +96,6 @@ public class CameraActivity extends Activity {
   protected void onPause() {
     mMyCamera.close();
     super.onPause();
-  }
-
-  private void resetCam() {
-    mMyCamera.camera().startPreview();
-    mPreview.setCamera();
   }
 
   private void refreshGallery(File file) {
@@ -124,7 +118,7 @@ public class CameraActivity extends Activity {
   PictureCallback jpegCallback = new PictureCallback() {
     public void onPictureTaken(byte[] data, Camera camera) {
       new SaveImageTask().execute(data);
-      resetCam();
+//      resetCam();
       pr("onPictureTaken - jpeg");
     }
   };

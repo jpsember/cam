@@ -5,6 +5,7 @@ import android.view.View;
 import android.widget.LinearLayout;
 
 import com.js.android.UITools;
+import static com.js.basic.Tools.*;
 
 /**
  * A view that toggles between large and small size when touched
@@ -45,6 +46,7 @@ public class ShrinkingView extends View implements View.OnTouchListener {
   private void addToContainer() {
     LinearLayout.LayoutParams param = UITools.layoutParams(mGreenViewContainer,
         mNormalWeight * (mGreenViewCollapsed ? .3f : 1.0f));
+    pr("Replacing ShrinkingView "+nameOf(this)+" within its container");
     mGreenViewContainer.removeView(this);
     mGreenViewContainer.addView(this, mPositionInParent, param);
   }
