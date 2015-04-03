@@ -28,7 +28,7 @@ import com.js.android.UITools;
 import static com.js.basic.Tools.*;
 import static com.js.android.AndroidTools.*;
 
-public class CamTestActivity extends Activity {
+public class CameraActivity extends Activity {
 
   @Override
   public void onCreate(Bundle savedInstanceState) {

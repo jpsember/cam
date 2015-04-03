@@ -136,6 +136,7 @@ public class CameraView extends ViewGroup implements SurfaceHolder.Callback {
     Size optimalSize = null;
     double minDiff = Double.MAX_VALUE;
 
+
     int targetHeight = height;
 
     // Try to find an size match aspect ratio and size
