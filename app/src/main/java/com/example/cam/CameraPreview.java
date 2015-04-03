@@ -20,15 +20,19 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
   public CameraPreview(Context context) {
     super(context);
     addSurfaceView();
+    mHolder.addCallback(this);
   }
 
   private void addSurfaceView() {
     SurfaceView surfaceView = new SurfaceView(this.getContext());
-    this.addView(surfaceView);
-    surfaceView.getHolder().addCallback(this);
+    mHolder = surfaceView.getHolder();
+    addView(surfaceView);
   }
 
   public void setCamera(Camera camera) {
+    if (mCamera == camera)
+      return;
+    stopPreviewAndFreeCamera();
     mCamera = camera;
     if (mCamera == null)
       return;
@@ -36,13 +40,21 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
     mSupportedPreviewSizes = mCamera.getParameters().getSupportedPreviewSizes();
     requestLayout();
 
-    Camera.Parameters params = mCamera.getParameters();
-
-    List<String> focusModes = params.getSupportedFocusModes();
-    if (focusModes.contains(Camera.Parameters.FOCUS_MODE_AUTO)) {
-      params.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
-      mCamera.setParameters(params);
+    try {
+      mCamera.setPreviewDisplay(mHolder);
+    } catch (IOException e) {
+      e.printStackTrace();
     }
+
+    mCamera.startPreview();
+  }
+
+  private void stopPreviewAndFreeCamera() {
+    if (mCamera == null)
+      return;
+    mCamera.stopPreview();
+    mCamera.release();
+    mCamera = null;
   }
 
   @Override
@@ -167,4 +179,6 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
   private Size mPreviewSize;
   private List<Size> mSupportedPreviewSizes;
   private Camera mCamera;
+  private SurfaceHolder mHolder;
+
 }
