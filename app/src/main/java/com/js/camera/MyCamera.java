@@ -48,10 +48,7 @@ public class MyCamera {
         mCameraId = preferredCameraId;
         trace("attempting to Camera.open(" + preferredCameraId + ")");
         mCamera = Camera.open(preferredCameraId);
-
-        // The display is rotated correctly, but the aspect ratio is squashed now
-        setCameraDisplayOrientation();
-
+        mCamera.setDisplayOrientation(determineDisplayOrientation());
       } catch (RuntimeException e) {
         warning("Failed to open camera #" + preferredCameraId + ":\n" + e);
       }
@@ -101,7 +98,7 @@ public class MyCamera {
     return mCamera;
   }
 
-  public int determineDisplayOrientation() {
+  private int determineDisplayOrientation() {
     trace("determineCameraDisplayOrientation()");
     assertOpen();
     Camera.CameraInfo info =
@@ -126,22 +123,12 @@ public class MyCamera {
     }
 
     int result;
-    if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+    if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT)
       result = -(info.orientation + degrees);
-    } else {  // back-facing
+    else
       result = info.orientation - degrees;
-    }
     result = myMod(result, 360);
     return result;
-  }
-
-  private void setCameraDisplayOrientation() {
-    trace("setCameraDisplayOrientation()");
-    if (!isOpen())
-      return;
-    int degrees = determineDisplayOrientation();
-    trace(" setting display orientation to " + degrees);
-    mCamera.setDisplayOrientation(degrees);
   }
 
   public void setTrace(boolean state) {
@@ -175,7 +162,6 @@ public class MyCamera {
     parameters.setPreviewSize(mPreviewSize.x, mPreviewSize.y);
     mCamera.setParameters(parameters);
   }
-
 
   @Override
   public String toString() {
