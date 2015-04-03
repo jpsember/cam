@@ -17,10 +17,6 @@ import static com.js.basic.Tools.*;
 
 public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
 
-  /**
-   * TODO: image seems squashed in some orientations
-   */
-
   public CameraPreview(Context context, MyCamera camera) {
     super(context);
     ASSERT(camera != null);
