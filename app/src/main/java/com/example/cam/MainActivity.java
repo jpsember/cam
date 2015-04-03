@@ -30,7 +30,7 @@ import com.js.android.UITools;
 import static com.js.basic.Tools.*;
 import static com.js.android.AndroidTools.*;
 
-public class CameraActivity extends Activity {
+public class MainActivity extends Activity {
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
