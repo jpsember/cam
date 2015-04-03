@@ -1,5 +1,7 @@
 package com.js.basic;
 
+import android.graphics.Matrix;
+
 import java.util.List;
 
 public class Rect {
@@ -67,9 +69,6 @@ public class Rect {
 
   /**
    * Construct smallest rectangle containing two points
-   * 
-   * @param pt1
-   * @param pt2
    */
   public Rect(Point pt1, Point pt2) {
     x = Math.min(pt1.x, pt2.x);
@@ -92,7 +91,7 @@ public class Rect {
 
   public android.graphics.Rect toAndroid() {
     android.graphics.Rect androidRect = new android.graphics.Rect();
-    androidRect.set((int) x, (int) y, (int)(x+ width), (int) (y+height));
+    androidRect.set((int) x, (int) y, (int) (x + width), (int) (y + height));
     return androidRect;
   }
 
@@ -152,8 +151,6 @@ public class Rect {
 
   /**
    * Find the nearest point within the rectangle to a query point
-   * 
-   * @param queryPoint
    */
   public Point nearestPointTo(Point queryPoint) {
     return new Point(MyMath.clamp(queryPoint.x, x, endX()), MyMath.clamp(
@@ -179,8 +176,6 @@ public class Rect {
 
   /**
    * Scale x,y,width,height by factor
-   * 
-   * @param f
    */
   public void scale(float f) {
     x *= f;
@@ -200,29 +195,27 @@ public class Rect {
 
   /**
    * Get point for corner of rectangle
-   * 
-   * @param i
-   *          corner number (0..3), bottomleft ccw to topleft
-   * @return corner
+   *
+   * @param i corner number (0..3), bottomleft ccw to topleft
    */
   public Point corner(int i) {
     Point ret = null;
 
     switch (i) {
-    default:
-      throw new IllegalArgumentException();
-    case 0:
-      ret = bottomLeft();
-      break;
-    case 1:
-      ret = bottomRight();
-      break;
-    case 2:
-      ret = topRight();
-      break;
-    case 3:
-      ret = topLeft();
-      break;
+      default:
+        throw new IllegalArgumentException();
+      case 0:
+        ret = bottomLeft();
+        break;
+      case 1:
+        ret = bottomRight();
+        break;
+      case 2:
+        ret = topRight();
+        break;
+      case 3:
+        ret = topLeft();
+        break;
     }
 
     return ret;
@@ -253,6 +246,25 @@ public class Rect {
 
   public Point size() {
     return new Point(width, height);
+  }
+
+  public void apply(Matrix m) {
+    float[] f = new float[9];
+    m.getValues(f);
+
+    float xEnd = endX();
+    float yEnd = endY();
+
+    float newX = f[0] * x + f[1] * y + f[2];
+    float newY = f[3] * x + f[4] * y + f[5];
+
+    float newXEnd = f[0] * xEnd + f[1] * yEnd + f[2];
+    float newYEnd = f[3] * xEnd + f[4] * yEnd + f[5];
+
+    this.x = newX;
+    this.y = newY;
+    this.width = newXEnd - newX;
+    this.height = newYEnd - newY;
   }
 
   public float x, y, width, height;

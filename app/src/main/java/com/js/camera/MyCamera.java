@@ -4,8 +4,15 @@ import android.app.Activity;
 import android.hardware.Camera;
 import android.view.Surface;
 
+import com.js.basic.IPoint;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import static com.js.basic.Tools.*;
 import static com.js.android.AndroidTools.*;
+
+import android.hardware.Camera.Size;
 
 /**
  * Encapsulates the camera object, and any additional data; also handles initializing it
@@ -84,16 +91,19 @@ public class MyCamera {
     return mActivity;
   }
 
-  public Camera camera() {
+  public void assertOpen() {
     if (!isOpen())
       throw new IllegalStateException("Camera not open");
+  }
+
+  public Camera camera() {
+    assertOpen();
     return mCamera;
   }
 
-  private void setCameraDisplayOrientation() {
-    trace("setCameraDisplayOrientation()");
-    if (!isOpen())
-      return;
+  public int determineDisplayOrientation() {
+    trace("determineCameraDisplayOrientation()");
+    assertOpen();
     Camera.CameraInfo info =
         new Camera.CameraInfo();
     Camera.getCameraInfo(mCameraId, info);
@@ -117,13 +127,21 @@ public class MyCamera {
 
     int result;
     if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-      result = (info.orientation + degrees) % 360;
-      result = (360 - result) % 360;  // compensate the mirror
+      result = -(info.orientation + degrees);
     } else {  // back-facing
-      result = (info.orientation - degrees + 360) % 360;
+      result = info.orientation - degrees;
     }
-    trace("setCameraDisplayOrientation to " + result);
-    mCamera.setDisplayOrientation(result);
+    result = myMod(result, 360);
+    return result;
+  }
+
+  private void setCameraDisplayOrientation() {
+    trace("setCameraDisplayOrientation()");
+    if (!isOpen())
+      return;
+    int degrees = determineDisplayOrientation();
+    trace(" setting display orientation to " + degrees);
+    mCamera.setDisplayOrientation(degrees);
   }
 
   public void setTrace(boolean state) {
@@ -135,6 +153,20 @@ public class MyCamera {
   private void trace(Object msg) {
     if (mTrace)
       pr("--      MyCamera --: " + msg);
+  }
+
+  /**
+   * Get list of preview sizes supported for camera, as IPoint objects
+   */
+  public List<IPoint> getPreviewSizes() {
+    assertOpen();
+    Camera.Parameters parameters = mCamera.getParameters();
+    List<Size> sizes = parameters.getSupportedPreviewSizes();
+    List<IPoint> output = new ArrayList();
+    for (Size size : sizes) {
+      output.add(new IPoint(size.width, size.height));
+    }
+    return output;
   }
 
   @Override
