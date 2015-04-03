@@ -23,6 +23,8 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import com.js.android.AndroidTools;
+import com.js.android.AppPreferences;
 import com.js.android.UITools;
 
 import static com.js.basic.Tools.*;
@@ -32,12 +34,15 @@ public class CameraActivity extends Activity {
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
+    startApp(this);
+    AppPreferences.prepare(this);
+    doNothingAndroid();
+
     super.onCreate(savedInstanceState);
     requestWindowFeature(Window.FEATURE_NO_TITLE);
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
     setContentView(buildContentView());
-
 
     Toast.makeText(this, getString(R.string.take_photo_help), Toast.LENGTH_LONG).show();
   }
@@ -67,7 +72,7 @@ public class CameraActivity extends Activity {
   }
 
   private void buildCameraView() {
-    mPreview = new CameraView(this);
+    mPreview = new CameraPreview(this);
     mPreview.setKeepScreenOn(true);
     mPreview.setOnClickListener(new OnClickListener() {
       @Override
@@ -80,26 +85,13 @@ public class CameraActivity extends Activity {
   @Override
   protected void onResume() {
     super.onResume();
-    int numCams = Camera.getNumberOfCameras();
-    if (numCams > 0) {
-      try {
-        mCamera = Camera.open(0);
-        mCamera.startPreview();
-        mPreview.setCamera(mCamera);
-      } catch (RuntimeException ex) {
-        showException(this, ex, null);
-      }
-    }
+    if (!openCamera())
+      AndroidTools.toast(this, "Could not open any cameras");
   }
 
   @Override
   protected void onPause() {
-    if (mCamera != null) {
-      mCamera.stopPreview();
-      mPreview.setCamera(null);
-      mCamera.release();
-      mCamera = null;
-    }
+    closeCamera();
     super.onPause();
   }
 
@@ -165,6 +157,43 @@ public class CameraActivity extends Activity {
 
   }
 
-  private CameraView mPreview;
+  private boolean openCamera() {
+
+    // Prefer a front-facing camera; if not found, use first (if there is one)
+    int preferredCameraId = -1;
+
+    Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
+    for (int cameraId = 0; cameraId < Camera.getNumberOfCameras(); cameraId++) {
+      Camera.getCameraInfo(cameraId, cameraInfo);
+      if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+        preferredCameraId = cameraId;
+        break;
+      }
+      if (preferredCameraId < 0)
+        preferredCameraId = cameraId;
+    }
+
+    if (preferredCameraId >= 0) {
+      try {
+        mCamera = Camera.open(preferredCameraId);
+        mCamera.startPreview();
+        mPreview.setCamera(mCamera);
+      } catch (RuntimeException e) {
+        warning("Failed to open camera #" + preferredCameraId + ":\n" + e);
+      }
+    }
+    return mCamera != null;
+  }
+
+  private void closeCamera() {
+    if (mCamera == null)
+      return;
+    mCamera.stopPreview();
+    mPreview.setCamera(null);
+    mCamera.release();
+    mCamera = null;
+  }
+
+  private CameraPreview mPreview;
   private Camera mCamera;
 }

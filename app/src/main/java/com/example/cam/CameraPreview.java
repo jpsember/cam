@@ -15,9 +15,9 @@ import com.js.basic.IPoint;
 
 import static com.js.basic.Tools.*;
 
-public class CameraView extends ViewGroup implements SurfaceHolder.Callback {
+public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
 
-  public CameraView(Context context) {
+  public CameraPreview(Context context) {
     super(context);
     addSurfaceView();
   }
