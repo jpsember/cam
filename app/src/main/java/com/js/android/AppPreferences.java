@@ -33,7 +33,7 @@ public class AppPreferences {
   public static void prepare(Context context) {
     if (context instanceof Activity) {
       if (sPreferences != null)
-        throw new IllegalStateException("Preferences already prepared");
+        return;
 
       sPreferences = ((Activity) context).getPreferences(Context.MODE_PRIVATE);
     } else {

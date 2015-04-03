@@ -15,6 +15,7 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.Window;
@@ -42,6 +43,9 @@ public class CameraActivity extends Activity {
     requestWindowFeature(Window.FEATURE_NO_TITLE);
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
+    mMyCamera.setTrace(true);
+    mMyCamera.setActivity(this);
+
     setContentView(buildContentView());
 
     Toast.makeText(this, getString(R.string.take_photo_help), Toast.LENGTH_LONG).show();
@@ -51,7 +55,7 @@ public class CameraActivity extends Activity {
     buildCameraView();
 
     // Construct a linear layout that contains the Camera view, and some other views as well
-    LinearLayout container = UITools.linearLayout(this, false);
+    final LinearLayout container = UITools.linearLayout(this, false);
 
     FrameLayout cameraViewContainer = new FrameLayout(this);
     {
@@ -60,24 +64,23 @@ public class CameraActivity extends Activity {
       cameraViewContainer.addView(mPreview);
     }
 
-    // Have the camera view container and a dummy view share the screen side by side
+    // Have the camera view container and the shriking views share the screen side by side
+    ShrinkingView.build(container, 1.2f);
     container.addView(cameraViewContainer, UITools.layoutParams(container, 1.0f));
+    ShrinkingView.build(container, 0.8f);
 
-    {
-      View blankView = new View(this);
-      blankView.setBackgroundColor(Color.GREEN);
-      container.addView(blankView, UITools.layoutParams(container, 1.0f));
-    }
     return container;
   }
 
+
   private void buildCameraView() {
-    mPreview = new CameraPreview(this);
+    mPreview = new CameraPreview(this, mMyCamera);
     mPreview.setKeepScreenOn(true);
     mPreview.setOnClickListener(new OnClickListener() {
       @Override
       public void onClick(View arg0) {
-        mCamera.takePicture(shutterCallback, rawCallback, jpegCallback);
+        if (mMyCamera.isOpen())
+          mMyCamera.camera().takePicture(shutterCallback, rawCallback, jpegCallback);
       }
     });
   }
@@ -85,19 +88,20 @@ public class CameraActivity extends Activity {
   @Override
   protected void onResume() {
     super.onResume();
-    if (!openCamera())
+    mMyCamera.load();
+    if (!mMyCamera.isOpen())
       AndroidTools.toast(this, "Could not open any cameras");
   }
 
   @Override
   protected void onPause() {
-    closeCamera();
+    mMyCamera.close();
     super.onPause();
   }
 
   private void resetCam() {
-    mCamera.startPreview();
-    mPreview.setCamera(mCamera);
+    mMyCamera.camera().startPreview();
+    mPreview.setCamera();
   }
 
   private void refreshGallery(File file) {
@@ -157,43 +161,6 @@ public class CameraActivity extends Activity {
 
   }
 
-  private boolean openCamera() {
-
-    // Prefer a front-facing camera; if not found, use first (if there is one)
-    int preferredCameraId = -1;
-
-    Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
-    for (int cameraId = 0; cameraId < Camera.getNumberOfCameras(); cameraId++) {
-      Camera.getCameraInfo(cameraId, cameraInfo);
-      if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-        preferredCameraId = cameraId;
-        break;
-      }
-      if (preferredCameraId < 0)
-        preferredCameraId = cameraId;
-    }
-
-    if (preferredCameraId >= 0) {
-      try {
-        mCamera = Camera.open(preferredCameraId);
-        mCamera.startPreview();
-        mPreview.setCamera(mCamera);
-      } catch (RuntimeException e) {
-        warning("Failed to open camera #" + preferredCameraId + ":\n" + e);
-      }
-    }
-    return mCamera != null;
-  }
-
-  private void closeCamera() {
-    if (mCamera == null)
-      return;
-    mCamera.stopPreview();
-    mPreview.setCamera(null);
-    mCamera.release();
-    mCamera = null;
-  }
-
+  private MyCamera mMyCamera = new MyCamera();
   private CameraPreview mPreview;
-  private Camera mCamera;
 }
