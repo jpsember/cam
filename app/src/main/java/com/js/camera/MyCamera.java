@@ -20,6 +20,14 @@ import android.hardware.Camera.Size;
  */
 public class MyCamera {
 
+  public MyCamera() {
+    mState = State.Start;
+  }
+
+  private enum State {
+    Start, Opening, Open, Closed, Failed
+  }
+
   public void setActivity(Activity activity) {
     mActivity = activity;
     doNothing();
@@ -27,36 +35,51 @@ public class MyCamera {
   }
 
   public void open() {
+    if (mState != State.Start && mState != State.Closed)
+      throw new IllegalStateException();
+
     trace("open()");
 
-    // Prefer a front-facing camera; if not found, use first (if there is one)
+    // Find preferred facing; if not found, use first camera
+    int PREFERRED_FACING = Camera.CameraInfo.CAMERA_FACING_BACK;
+
     int preferredCameraId = -1;
 
     Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
     for (int cameraId = 0; cameraId < Camera.getNumberOfCameras(); cameraId++) {
       Camera.getCameraInfo(cameraId, cameraInfo);
-      if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+      if (cameraInfo.facing == PREFERRED_FACING) {
         preferredCameraId = cameraId;
         break;
       }
       if (preferredCameraId < 0)
         preferredCameraId = cameraId;
     }
+    if (preferredCameraId < 0) {
+      setFailed("No cameras found");
+      return;
+    }
 
-    if (preferredCameraId >= 0) {
-      try {
-        mCameraId = preferredCameraId;
-        trace("attempting to Camera.open(" + preferredCameraId + ")");
-        mCamera = Camera.open(preferredCameraId);
-        mCamera.setDisplayOrientation(determineDisplayOrientation());
-      } catch (RuntimeException e) {
-        warning("Failed to open camera #" + preferredCameraId + ":\n" + e);
-      }
+    try {
+      mCameraId = preferredCameraId;
+      trace("attempting to Camera.open(" + preferredCameraId + ")");
+      mCamera = Camera.open(preferredCameraId);
+      mCamera.setDisplayOrientation(determineDisplayOrientation());
+      setState(State.Open);
+    } catch (RuntimeException e) {
+      setFailed("Unable to open camera; "+d(e));
+    }
+  }
+
+  private void setState(State state) {
+    if (mState != state) {
+      trace("Changing state from " + mState + " to " + state);
+      mState = state;
     }
   }
 
   public boolean isOpen() {
-    return mCamera != null;
+    return mState == State.Open;
   }
 
   public void startPreview() {
@@ -80,6 +103,7 @@ public class MyCamera {
     mCamera.stopPreview();
     mCamera.release();
     mCamera = null;
+    setState(State.Closed);
   }
 
   public Activity activity() {
@@ -100,7 +124,6 @@ public class MyCamera {
 
   private int determineDisplayOrientation() {
     trace("determineCameraDisplayOrientation()");
-    assertOpen();
     Camera.CameraInfo info =
         new Camera.CameraInfo();
     Camera.getCameraInfo(mCameraId, info);
@@ -165,11 +188,25 @@ public class MyCamera {
 
   @Override
   public String toString() {
-    return "MyCamera, open=" + d(isOpen()) + " id=" + d(mCameraId);
+    String s = "MyCamera";
+    s += " state " + mState;
+    if (mState == State.Failed)
+      s += " (cause:" + mFailureMessage + ")";
+    return s;
+  }
+
+  private void setFailed(String message) {
+    if (mState == State.Failed)
+      return;
+    setState(State.Failed);
+    mFailureMessage = message;
+    trace("Failed with message "+message);
   }
 
   private Camera mCamera;
   private int mCameraId;
   private Activity mActivity;
   private boolean mTrace;
+  private State mState;
+  private String mFailureMessage;
 }
