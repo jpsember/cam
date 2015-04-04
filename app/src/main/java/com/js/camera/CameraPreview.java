@@ -1,7 +1,6 @@
 package com.js.camera;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 import android.content.Context;
@@ -182,16 +181,13 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
   }
 
   private void constructOverlayViews() {
-    View view = new OverlayView(this);
-    mOverlayViews.add(view);
-    this.addView(view);
+    mOverlayView = new OverlayView(this);
+    addView(mOverlayView);
   }
 
   private void layoutOverlayViews(Rect r) {
-    for (View view : mOverlayViews) {
-      view.layout((int) r.x, (int) r.y,
-          (int) r.endX(), (int) r.endY());
-    }
+    mOverlayView.layout((int) r.x, (int) r.y,
+        (int) r.endX(), (int) r.endY());
   }
 
   /**
@@ -285,8 +281,8 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
   private MyCamera mCamera;
   // The SurfaceView that will display the camera preview
   private SurfaceView mSurfaceView;
-  // Overlaid views to appear above the surface view
-  private List<View> mOverlayViews = new ArrayList();
+  // Overlaid view to appear above the surface view
+  private View mOverlayView;
   // The preview size, one of the candidate sizes provided by the camera.
   private IPoint mPreviewSize;
   private int mBackgroundColor;
