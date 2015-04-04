@@ -195,11 +195,25 @@ public class MyCamera {
     return output;
   }
 
-  public void setPreviewSize(IPoint mPreviewSize) {
+  public void setPreviewSize(IPoint size) {
     assertOpen();
     Camera.Parameters parameters = mCamera.getParameters();
-    parameters.setPreviewSize(mPreviewSize.x, mPreviewSize.y);
-    mCamera.setParameters(parameters);
+    parameters.setPreviewSize(size.x, size.y);
+    setParameters(parameters);
+  }
+
+  private void setParameters(Camera.Parameters parameters) {
+    trace("setParameters");
+    // Issue #9: avoid changing parameters while preview is active
+    boolean previewWasStarted = mPreviewStarted;
+    stopPreview();
+    try {
+      mCamera.setParameters(parameters);
+    } catch (RuntimeException e) {
+      warning("Failed setting parameters: " + d(e));
+    }
+    if (previewWasStarted)
+      startPreview();
   }
 
   @Override
