@@ -23,7 +23,6 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
-import com.js.android.AndroidTools;
 import com.js.android.AppPreferences;
 import com.js.android.UITools;
 import com.js.camera.camera.R;
@@ -43,8 +42,9 @@ public class MainActivity extends Activity {
     requestWindowFeature(Window.FEATURE_NO_TITLE);
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
-    mMyCamera.setTrace(true);
-    mMyCamera.setActivity(this);
+    mCamera = new MyCamera();
+    mCamera.setTrace(true);
+    mCamera.setActivity(this);
 
     setContentView(buildContentView());
 
@@ -74,13 +74,13 @@ public class MainActivity extends Activity {
 
 
   private void buildCameraView() {
-    mPreview = new CameraPreview(this, mMyCamera);
+    mPreview = new CameraPreview(this, mCamera);
     mPreview.setKeepScreenOn(true);
     mPreview.setOnClickListener(new OnClickListener() {
       @Override
       public void onClick(View arg0) {
-        if (mMyCamera.isOpen())
-          mMyCamera.camera().takePicture(shutterCallback, rawCallback, jpegCallback);
+        if (mCamera.isOpen())
+          mCamera.camera().takePicture(shutterCallback, rawCallback, jpegCallback);
       }
     });
   }
@@ -88,12 +88,12 @@ public class MainActivity extends Activity {
   @Override
   protected void onResume() {
     super.onResume();
-    mMyCamera.open();
+    mCamera.open();
   }
 
   @Override
   protected void onPause() {
-    mMyCamera.close();
+    mCamera.close();
     super.onPause();
   }
 
@@ -118,7 +118,7 @@ public class MainActivity extends Activity {
     public void onPictureTaken(byte[] data, Camera camera) {
       new SaveImageTask().execute(data);
       pr("onPictureTaken - jpeg");
-      mMyCamera.startPreview();
+      mCamera.startPreview();
 
     }
   };
@@ -155,6 +155,6 @@ public class MainActivity extends Activity {
 
   }
 
-  private MyCamera mMyCamera = new MyCamera();
+  private MyCamera mCamera;
   private CameraPreview mPreview;
 }
