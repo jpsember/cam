@@ -2,6 +2,7 @@ package com.js.camera;
 
 import android.app.Activity;
 import android.hardware.Camera;
+import android.os.AsyncTask;
 import android.view.Surface;
 
 import com.js.basic.IPoint;
@@ -19,6 +20,8 @@ import android.hardware.Camera.Size;
  * asynchronously
  */
 public class MyCamera {
+
+  private static final boolean SIMULATED_DELAYS = true;
 
   public MyCamera() {
     mState = State.Start;
@@ -60,16 +63,11 @@ public class MyCamera {
       return;
     }
 
-    try {
-      mCameraId = preferredCameraId;
-      trace("attempting to Camera.open(" + preferredCameraId + ")");
-      mCamera = Camera.open(preferredCameraId);
-      mCamera.setDisplayOrientation(determineDisplayOrientation());
-      setState(State.Open);
-    } catch (RuntimeException e) {
-      setFailed("Unable to open camera; "+d(e));
-    }
+    mCameraId = preferredCameraId;
+    setState(State.Opening);
+    new OpenCameraTask().execute();
   }
+
 
   private void setState(State state) {
     if (mState != state) {
@@ -200,7 +198,44 @@ public class MyCamera {
       return;
     setState(State.Failed);
     mFailureMessage = message;
-    trace("Failed with message "+message);
+    trace("Failed with message " + message);
+  }
+
+  /**
+   * AsyncTask to open the camera, which according to the documentation
+   * is potentially time consuming
+   */
+  private class OpenCameraTask extends AsyncTask<Void, Void, Camera> {
+
+    protected Camera doInBackground(Void... params) {
+      if (SIMULATED_DELAYS)
+        sleepFor(1200);
+
+      int preferredCameraId = mCameraId;
+      Camera camera = null;
+      try {
+        camera = Camera.open(preferredCameraId);
+      } catch (RuntimeException e) {
+        warning("Failed to open camera: " + d(e));
+      }
+
+      if (SIMULATED_DELAYS)
+        sleepFor(1200);
+
+      return camera;
+    }
+
+    protected void onPostExecute(Camera camera) {
+      if (camera == null) {
+        setFailed("Opening camera");
+        return;
+      }
+
+      mCamera = camera;
+      setState(State.Open);
+      mCamera.setDisplayOrientation(determineDisplayOrientation());
+      startPreview();
+    }
   }
 
   private Camera mCamera;

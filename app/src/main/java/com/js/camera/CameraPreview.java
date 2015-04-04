@@ -22,7 +22,7 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
   public CameraPreview(Context context, MyCamera camera) {
     super(context);
     ASSERT(camera != null);
-//    setTrace(true);
+    setTrace(true);
     mCamera = camera;
     addSurfaceView();
     mHolder.addCallback(this);
@@ -85,6 +85,7 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
     // The Surface has been created, acquire the mCamera and tell it where
     // to draw.
     try {
+      unimp("we need to be able to make this call when the camera finally becomes open");
       if (mCamera.isOpen())
         mCamera.camera().setPreviewDisplay(holder);
     } catch (IOException exception) {
