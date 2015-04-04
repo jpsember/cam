@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.List;
 
 import android.content.Context;
-import android.graphics.Matrix;
 import android.hardware.Camera;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -17,21 +16,15 @@ import com.js.basic.Rect;
 
 import static com.js.basic.Tools.*;
 
-public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
+public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, MyCamera.Listener {
 
   public CameraPreview(Context context, MyCamera camera) {
     super(context);
     ASSERT(camera != null);
     setTrace(true);
     mCamera = camera;
-    addSurfaceView();
-    mHolder.addCallback(this);
-  }
-
-  private void addSurfaceView() {
-    SurfaceView surfaceView = new SurfaceView(this.getContext());
-    mHolder = surfaceView.getHolder();
-    addView(surfaceView);
+    // Don't add the surface view until we get notification that the camera has been opened
+    camera.setListener(this);
   }
 
   @Override
@@ -47,6 +40,7 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
     // Don't calculate optimal size if either dimension is zero;
     // the layout is probably in an intermediate state due to a view
     // being added or removed
+    warning("refactor this... can we delay it?");
     if (mCamera.isOpen() && width > 0 && height > 0) {
       getOptimalPreviewSize(width, height);
     }
@@ -54,26 +48,41 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
 
   @Override
   protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
-    trace("onLayout, changed=" + d(changed));
-    if (changed && getChildCount() > 0) {
-      View child = getChildAt(0);
+    trace("onLayout, child count=" + getChildCount());
+    if (getChildCount() == 0)
+      return;
 
-      int width = right - left;
-      int height = bottom - top;
+    View child = getChildAt(0);
 
-      int previewWidth = width;
-      int previewHeight = height;
-      if (mPreviewSize != null) {
-        previewWidth = mPreviewSize.x;
-        previewHeight = mPreviewSize.y;
-      }
+    int width = right - left;
+    int height = bottom - top;
 
-      Rect innerRect = new Rect(0, 0, previewWidth, previewHeight);
-      Rect outerRect = new Rect(0, 0, width, height);
+    int previewWidth = width;
+    int previewHeight = height;
+    if (mPreviewSize != null) {
+      previewWidth = mPreviewSize.x;
+      previewHeight = mPreviewSize.y;
+    }
 
-      innerRect.apply(MyMath.calcRectFitRectTransform(innerRect, outerRect));
-      child.layout((int) innerRect.x, (int) innerRect.y,
-          (int) innerRect.endX(), (int) innerRect.endY());
+    Rect innerRect = new Rect(0, 0, previewWidth, previewHeight);
+    Rect outerRect = new Rect(0, 0, width, height);
+    innerRect.apply(MyMath.calcRectFitRectTransform(innerRect, outerRect));
+    child.layout((int) innerRect.x, (int) innerRect.y,
+        (int) innerRect.endX(), (int) innerRect.endY());
+  }
+
+  // ------------- MyCamera.Listener interface
+  @Override
+  public void cameraChanged(Camera camera) {
+    trace("cameraChanged to " + nameOf(camera));
+    if (camera != null) {
+      if (getChildCount() != 0)
+        die("surface already active");
+
+      SurfaceView surfaceView = new SurfaceView(this.getContext());
+      addView(surfaceView);
+      surfaceView.getHolder().addCallback(this);
+      mCamera.startPreview();
     }
   }
 
@@ -85,7 +94,6 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
     // The Surface has been created, acquire the mCamera and tell it where
     // to draw.
     try {
-      unimp("we need to be able to make this call when the camera finally becomes open");
       if (mCamera.isOpen())
         mCamera.camera().setPreviewDisplay(holder);
     } catch (IOException exception) {
@@ -99,10 +107,6 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
     if (!mCamera.isOpen())
       return;
     mCamera.setPreviewSize(mPreviewSize);
-    requestLayout();
-
-    // Important: Call startPreview() to start updating the preview surface.
-    // Preview must be started before you can take a picture.
     mCamera.startPreview();
   }
 
@@ -111,10 +115,6 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
     trace("surfaceDestroyed(), camera.isOpen=" + d(mCamera.isOpen()));
     // Surface will be destroyed when we return, so stop the preview.
     mCamera.stopPreview();
-  }
-
-  private static float aspectRatio(int width, int height) {
-    return width / (float) height;
   }
 
   private void getOptimalPreviewSize(int targetWidth, int targetHeight) {
@@ -167,5 +167,4 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
   private boolean mTrace;
   private IPoint mPreviewSize;
   private MyCamera mCamera;
-  private SurfaceHolder mHolder;
 }

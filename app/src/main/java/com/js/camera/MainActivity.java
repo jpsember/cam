@@ -89,8 +89,6 @@ public class MainActivity extends Activity {
   protected void onResume() {
     super.onResume();
     mMyCamera.open();
-    if (!mMyCamera.isOpen())
-      AndroidTools.toast(this, "Could not open any cameras");
   }
 
   @Override

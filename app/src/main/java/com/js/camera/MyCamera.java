@@ -23,8 +23,20 @@ public class MyCamera {
 
   private static final boolean SIMULATED_DELAYS = true;
 
+  public interface Listener {
+    /**
+     * Called when the Camera object has been assigned a new value (null if it's been closed,
+     * non-null if it's been opened)
+     */
+    void cameraChanged(Camera camera);
+  }
+
   public MyCamera() {
     mState = State.Start;
+  }
+
+  public void setListener(Listener listener) {
+    mListener = listener;
   }
 
   private enum State {
@@ -100,8 +112,8 @@ public class MyCamera {
       return;
     mCamera.stopPreview();
     mCamera.release();
-    mCamera = null;
     setState(State.Closed);
+    setCamera(null);
   }
 
   public Activity activity() {
@@ -231,10 +243,19 @@ public class MyCamera {
         return;
       }
 
-      mCamera = camera;
       setState(State.Open);
-      mCamera.setDisplayOrientation(determineDisplayOrientation());
-      startPreview();
+      camera.setDisplayOrientation(determineDisplayOrientation());
+
+      // Set the camera, and give listener an opportunity to e.g. start preview
+      setCamera(camera);
+    }
+  }
+
+  private void setCamera(Camera camera) {
+    if (mCamera != camera) {
+      mCamera = camera;
+      if (mListener != null)
+        mListener.cameraChanged(mCamera);
     }
   }
 
@@ -244,4 +265,5 @@ public class MyCamera {
   private boolean mTrace;
   private State mState;
   private String mFailureMessage;
+  private Listener mListener;
 }
