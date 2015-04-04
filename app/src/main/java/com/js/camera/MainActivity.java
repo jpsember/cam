@@ -68,7 +68,6 @@ public class MainActivity extends Activity {
     // Have the camera view container and the shrinking views share the screen side by side
     ShrinkingView.build(container, 1.0f);
     container.addView(cameraViewContainer, UITools.layoutParams(container, 1.0f));
-    ShrinkingView.build(container, 1.0f);
 
     return container;
   }
@@ -76,6 +75,8 @@ public class MainActivity extends Activity {
 
   private void buildCameraView() {
     mPreview = new CameraPreview(this, mCamera);
+    mPreview.setGlassColor(0xc0600000);
+
     mPreview.setKeepScreenOn(true);
     mPreview.setOnClickListener(new OnClickListener() {
       @Override

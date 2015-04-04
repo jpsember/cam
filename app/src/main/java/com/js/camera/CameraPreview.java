@@ -30,6 +30,7 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
   public CameraPreview(Context context, MyCamera camera) {
     super(context);
 //    setTrace(true);
+    setGlassColor(TRANSPARENT_COLOR);
     mCamera = camera;
     camera.setListener(this);
 
@@ -41,8 +42,18 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
     }
   }
 
+  /**
+   * Verify that preview is still in initialization stage, and has not yet been
+   * displayed
+   */
+  private void assertInitializing() {
+    if (mSurfaceView != null)
+      throw new IllegalStateException();
+  }
+
   @Override
   public void setBackgroundColor(int color) {
+    assertInitializing();
     super.setBackgroundColor(color);
     // Save the background color so it's available to the overlay views
     mBackgroundColor = color;
@@ -170,15 +181,27 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
       pr("-- CameraPreview --: " + msg);
   }
 
+  private void constructOverlayViews() {
+    View view = new OverlayView(this);
+    mOverlayViews.add(view);
+    this.addView(view);
+  }
+
+  private void layoutOverlayViews(Rect r) {
+    for (View view : mOverlayViews) {
+      view.layout((int) r.x, (int) r.y,
+          (int) r.endX(), (int) r.endY());
+    }
+  }
+
   /**
    * View subclass for rendering things on top of the camera preview SurfaceView
    */
   private static class OverlayView extends View {
-    public OverlayView(Context context, int parentBackgroundColor) {
-      super(context);
-      mParentBackgroundColor = parentBackgroundColor;
-      // Make this view's background color transparent
-      setBackgroundColor(0x00ffffff);
+
+    public OverlayView(CameraPreview container) {
+      super(container.getContext());
+      mContainer = container;
     }
 
     @Override
@@ -213,11 +236,11 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
 
         paint = new Paint();
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(0x00ffffff);
-        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
+        paint.setColor(mContainer.mOverlayGlassColor);
+        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC));
         sTransparentPaint = paint;
       }
-      sFillBgndPaint.setColor(mParentBackgroundColor);
+      sFillBgndPaint.setColor(mContainer.mBackgroundColor);
     }
 
     private static final float CORNER_RADIUS = 30.0f;
@@ -248,21 +271,15 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
     private static Path sPath;
     private static Paint sFillBgndPaint;
     private static Paint sTransparentPaint;
-    private int mParentBackgroundColor;
+    private CameraPreview mContainer;
   }
 
-  private void constructOverlayViews() {
-    View view = new OverlayView(getContext(), mBackgroundColor);
-    mOverlayViews.add(view);
-    this.addView(view);
+  public void setGlassColor(int color) {
+    assertInitializing();
+    mOverlayGlassColor = color;
   }
 
-  private void layoutOverlayViews(Rect r) {
-    for (View view : mOverlayViews) {
-      view.layout((int) r.x, (int) r.y,
-          (int) r.endX(), (int) r.endY());
-    }
-  }
+  private static final int TRANSPARENT_COLOR = 0x00ffffff;
 
   private boolean mTrace;
   private MyCamera mCamera;
@@ -273,4 +290,5 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
   // The preview size, one of the candidate sizes provided by the camera.
   private IPoint mPreviewSize;
   private int mBackgroundColor;
+  private int mOverlayGlassColor;
 }
