@@ -29,7 +29,7 @@ public class ShrinkingView extends View implements View.OnTouchListener {
     addToContainer();
   }
 
-  private static final float sStateWeights[] = {1.0f, 3.0f, .2f};
+  private static final float sStateWeights[] = {.2f, 1.0f, 3.0f,};
 
   @Override
   public boolean onTouch(View v, MotionEvent event) {

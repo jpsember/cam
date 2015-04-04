@@ -43,7 +43,6 @@ public class MainActivity extends Activity {
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
     mCamera = new MyCamera();
-    mCamera.setTrace(true);
     mCamera.setActivity(this);
 
     setContentView(buildContentView());
@@ -125,9 +124,6 @@ public class MainActivity extends Activity {
       if (false) {
         new SaveImageTask().execute(data);
       }
-      pr("Restarting preview");
-      mCamera.startPreview();
-      pr("done restarting preview");
     }
   };
 

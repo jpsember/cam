@@ -33,6 +33,7 @@ public class MyCamera {
 
   public MyCamera() {
     mState = State.Start;
+    setTrace(true);
   }
 
   public void setListener(Listener listener) {
@@ -92,8 +93,23 @@ public class MyCamera {
     return mState == State.Open;
   }
 
+  /**
+   * Set the preview started state; ignored if camera isn't open
+   */
+  public void setPreviewStarted(boolean state) {
+    trace("setPreviewStarted(" + state + "); " + this + "\n" + stackTrace(0, 10));
+    if (!state) {
+      stopPreview();
+    } else {
+      startPreview();
+    }
+  }
+
+  /**
+   * Start the preview, if it is not already; ignored if camera isn't open
+   */
   public void startPreview() {
-    trace("startPreview(); " + this);
+    trace("setPreviewStarted(); " + this + " started=" + d(mPreviewStarted));
     if (mPreviewStarted)
       return;
     if (!isOpen())
@@ -102,14 +118,14 @@ public class MyCamera {
     mPreviewStarted = true;
   }
 
-  public void stopPreview() {
+  public boolean stopPreview() {
     trace("stopPreview(); " + this);
-    if (!mPreviewStarted)
-      return;
-    if (!isOpen())
-      return;
-    mCamera.stopPreview();
-    mPreviewStarted = false;
+    boolean wasStarted = mPreviewStarted;
+    if (mPreviewStarted) {
+      mCamera.stopPreview();
+      mPreviewStarted = false;
+    }
+    return wasStarted;
   }
 
   public void close() {
@@ -133,6 +149,9 @@ public class MyCamera {
       throw new IllegalStateException("Camera not open");
   }
 
+  /**
+   * Get the underlying Camera object; must be open
+   */
   public Camera camera() {
     assertOpen();
     return mCamera;
@@ -205,15 +224,13 @@ public class MyCamera {
   private void setParameters(Camera.Parameters parameters) {
     trace("setParameters");
     // Issue #9: avoid changing parameters while preview is active
-    boolean previewWasStarted = mPreviewStarted;
-    stopPreview();
+    boolean previewState = stopPreview();
     try {
       mCamera.setParameters(parameters);
     } catch (RuntimeException e) {
       warning("Failed setting parameters: " + d(e));
     }
-    if (previewWasStarted)
-      startPreview();
+    setPreviewStarted(previewState);
   }
 
   @Override
