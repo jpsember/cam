@@ -1,5 +1,7 @@
 package com.js.basic;
 
+import com.js.android.AndroidTools;
+
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashSet;
@@ -1124,6 +1126,7 @@ public final class Tools {
    * linefeeds (to effectively clear the console), and the time of day
    */
   public static void startApp(Object app) {
+    AndroidTools.prepareSystemOut();
     Calendar cal = Calendar.getInstance();
     java.text.SimpleDateFormat simpleDateFormat = new java.text.SimpleDateFormat(
         "h:mm:ss");

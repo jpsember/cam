@@ -1,6 +1,7 @@
 package com.js.android;
 
 import java.io.InputStream;
+import java.io.PrintStream;
 
 import com.js.basic.Files;
 
@@ -55,6 +56,38 @@ public final class AndroidTools {
       die("problem reading resource #" + resourceId, e);
     }
     return str;
+  }
+
+  /**
+   * Install a filter on System.out so multiple linefeeds are not filtered by the logger
+   */
+  public static void prepareSystemOut() {
+    AndroidSystemOutFilter.install();
+  }
+
+  private static class AndroidSystemOutFilter extends PrintStream {
+
+    public static void install() {
+      if (System.out instanceof AndroidSystemOutFilter)
+        return;
+      System.setOut(new AndroidSystemOutFilter());
+    }
+
+    private AndroidSystemOutFilter() {
+      super(System.out, true);
+    }
+
+    // This seems to be the only method I need to override...
+    @Override
+    public void write(byte[] buffer, int offset, int length) {
+      for (int i = 0; i < length; i++) {
+        byte ch = buffer[offset + i];
+        if (ch == '\n') {
+          write(' ');
+        }
+        write(ch);
+      }
+    }
   }
 
 }
