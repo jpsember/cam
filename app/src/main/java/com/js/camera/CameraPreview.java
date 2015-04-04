@@ -187,22 +187,12 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
       Rect r = sRect;
       r.setTo(0, 0, getWidth(), getHeight());
 
-      // Two different approaches
+      // Fill the exterior of the rectangle with the background color,
+      // then use PorterDuff CLEAR mode to fill the interior of the (rounded)
+      // rectangle with transparent color
+      sCanvas.drawRect(r.x, r.y, r.width, r.height, sFillBgndPaint);
+      fillRoundedRect(r, sTransparentPaint);
 
-      if (true) {
-        // Fill the exterior of the rectangle with the background color,
-        // then use PorterDuff CLEAR mode to fill the interior of the (rounded)
-        // rectangle with transparent color
-        sCanvas.drawRect(r.x, r.y, r.width, r.height, sFillBgndPaint);
-        fillRoundedRect(r, sTransparentPaint);
-      } else {
-        // Paint just the exterior of the rounded corners with the background color.
-        // This approach lets us use just four very small overlaid views corresponding
-        // to the corners, instead of a large view the same size as the SurfaceView;
-        // but who knows whether this 'optimization' actually helps under the hood
-        for (int c = 0; c < 4; c++)
-          paintRoundedCorner(r, c);
-      }
       // Don't retain reference to canvas
       prepareGraphicElements(null);
     }
@@ -231,39 +221,6 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
     }
 
     private static final float CORNER_RADIUS = 30.0f;
-
-    /**
-     * Paint the outside of a rounded corner
-     *
-     * @param rect   rectangle containing corner
-     * @param corner index of corner 0: bottom left, ccw to 3: top left
-     */
-    private static void paintRoundedCorner(Rect rect, int corner) {
-      float radius = CORNER_RADIUS;
-      float x0, x1;
-      float y0, y1;
-      if (corner < 2) {
-        y0 = rect.y;
-        y1 = y0 + radius;
-      } else {
-        y0 = rect.endY();
-        y1 = y0 - radius;
-      }
-      if ((corner & 1) == 0) {
-        x0 = rect.x;
-        x1 = x0 + radius;
-      } else {
-        x0 = rect.endX();
-        x1 = x0 - radius;
-      }
-      Path path = sPath;
-      path.reset();
-      path.moveTo(x0, y0);
-      path.lineTo(x1, y0);
-      path.quadTo(x0, y0, x0, y1);
-      path.lineTo(x0, y0);
-      sCanvas.drawPath(path, sFillBgndPaint);
-    }
 
     /**
      * Paint the interior of a rounded rectangle
