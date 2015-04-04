@@ -122,6 +122,8 @@ public class MainActivity extends Activity {
   PictureCallback jpegCallback = new PictureCallback() {
     public void onPictureTaken(byte[] data, Camera camera) {
       pr("...jpegCallback");
+      mCamera.camera().startPreview();
+
       warning("skipping save picture");
       if (false) {
         new SaveImageTask().execute(data);
