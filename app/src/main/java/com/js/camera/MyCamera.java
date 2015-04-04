@@ -21,7 +21,7 @@ import android.hardware.Camera.Size;
  */
 public class MyCamera {
 
-  private static final boolean SIMULATED_DELAYS = false;
+  private static final boolean SIMULATED_DELAYS = true;
 
   public interface Listener {
     /**
@@ -33,7 +33,7 @@ public class MyCamera {
 
   public MyCamera() {
     mState = State.Start;
-    setTrace(true);
+//    setTrace(true);
   }
 
   public void setListener(Listener listener) {

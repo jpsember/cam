@@ -16,14 +16,15 @@ import com.js.basic.Rect;
 
 import static com.js.basic.Tools.*;
 
+/**
+ * Container view for the camera preview view, a SurfaceView
+ */
 public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, MyCamera.Listener {
 
   public CameraPreview(Context context, MyCamera camera) {
     super(context);
-    ASSERT(camera != null);
 //    setTrace(true);
     mCamera = camera;
-    // Don't add the surface view until we get notification that the camera has been opened
     camera.setListener(this);
 
     // Add a zero-height SurfaceView to avoid the flashing problem; see issue #7
@@ -42,15 +43,6 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
     int width = resolveSize(getSuggestedMinimumWidth(), widthMeasureSpec);
     int height = resolveSize(getSuggestedMinimumHeight(), heightMeasureSpec);
     setMeasuredDimension(width, height);
-    trace("onMeasure, setMeasuredDimension to " + width + " x " + height);
-
-    // Don't calculate optimal size if either dimension is zero;
-    // the layout is probably in an intermediate state due to a view
-    // being added or removed
-    warning("refactor this... can we delay it?");
-    if (mCamera.isOpen() && width > 0 && height > 0) {
-      getOptimalPreviewSize(width, height);
-    }
   }
 
   @Override
@@ -58,23 +50,11 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
     trace("onLayout");
     if (mSurfaceView == null)
       return;
-
-    View child = mSurfaceView;
-
-    int width = right - left;
-    int height = bottom - top;
-
-    int previewWidth = width;
-    int previewHeight = height;
-    if (mPreviewSize != null) {
-      previewWidth = mPreviewSize.x;
-      previewHeight = mPreviewSize.y;
-    }
-
-    Rect innerRect = new Rect(0, 0, previewWidth, previewHeight);
-    Rect outerRect = new Rect(0, 0, width, height);
+    mPreviewSize = calculatePreviewSize();
+    Rect innerRect = new Rect(0, 0, mPreviewSize.x, mPreviewSize.y);
+    Rect outerRect = new Rect(0, 0, right - left, bottom - top);
     innerRect.apply(MyMath.calcRectFitRectTransform(innerRect, outerRect));
-    child.layout((int) innerRect.x, (int) innerRect.y,
+    mSurfaceView.layout((int) innerRect.x, (int) innerRect.y,
         (int) innerRect.endX(), (int) innerRect.endY());
   }
 
@@ -106,10 +86,12 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
   }
 
   @Override
-  public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
-    trace("surfaceChanged(), camera.isOpen=" + d(mCamera.isOpen()) + " mPreviewSize=" + mPreviewSize);
+  public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+    trace("surfaceChanged() " + mCamera + " surface size " + new IPoint(width, height));
     if (!mCamera.isOpen())
       return;
+    if (mPreviewSize == null)
+      throw new IllegalStateException();
     mCamera.setPreviewSize(mPreviewSize);
     mCamera.startPreview();
   }
@@ -120,23 +102,27 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
     mCamera.stopPreview();
   }
 
-  private void getOptimalPreviewSize(int targetWidth, int targetHeight) {
-    trace("getOptimalPreviewSize, target " + new IPoint(targetWidth, targetHeight));
-    if (targetWidth == 0 || targetHeight == 0)
-      throw new IllegalArgumentException();
+  /**
+   * Calculate the preview size, by choosing the candidate that best matches our view
+   */
+  private IPoint calculatePreviewSize() {
+    IPoint viewSize = new IPoint(getWidth(), getHeight());
+    trace("calculatePreviewSize, container size " + viewSize);
+    if (viewSize.x == 0 || viewSize.y == 0)
+      throw new IllegalStateException();
 
     List<IPoint> sizes = mCamera.getPreviewSizes();
     trace("sizes: " + d(sizes));
     IPoint optimalSize = null;
 
-    // Choose the largest preview size that will fit within our available view.
+    // Choose the largest preview size that will fit within us, its container.
     // Do two passes.  On the first pass, omit any preview sizes that are larger
     // than the target in either dimension
     for (int pass = 0; pass < 2; pass++) {
       int minError = Integer.MAX_VALUE / 10;
       for (IPoint size : sizes) {
-        int widthError = size.x - targetWidth;
-        int heightError = size.y - targetHeight;
+        int widthError = size.x - viewSize.x;
+        int heightError = size.y - viewSize.y;
         if (pass == 0 && (widthError > 0 || heightError > 0))
           continue;
 
@@ -152,8 +138,8 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
 
     if (optimalSize == null)
       throw new IllegalStateException();
-    mPreviewSize = optimalSize;
-    trace("set preview size to " + mPreviewSize);
+    trace("surfaceView size: " + optimalSize);
+    return optimalSize;
   }
 
   public void setTrace(boolean state) {
@@ -168,7 +154,9 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
   }
 
   private boolean mTrace;
-  private IPoint mPreviewSize;
   private MyCamera mCamera;
+  // The SurfaceView that will display the camera preview
   private SurfaceView mSurfaceView;
+  // The preview size, one of the candidate sizes provided by the camera.
+  private IPoint mPreviewSize;
 }
