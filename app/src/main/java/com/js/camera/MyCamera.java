@@ -110,7 +110,7 @@ public class MyCamera {
     trace("close()");
     if (!isOpen())
       return;
-    mCamera.stopPreview();
+    stopPreview();
     mCamera.release();
     setState(State.Closed);
     setCamera(null);

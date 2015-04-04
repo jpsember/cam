@@ -25,6 +25,13 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
     mCamera = camera;
     // Don't add the surface view until we get notification that the camera has been opened
     camera.setListener(this);
+
+    // Add a zero-height SurfaceView to avoid the flashing problem; see issue #7
+    {
+      View view = new SurfaceView(this.getContext());
+      view.setLayoutParams(new ViewGroup.LayoutParams(LayoutParams.MATCH_PARENT, 0));
+      addView(view);
+    }
   }
 
   @Override
@@ -48,11 +55,11 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
 
   @Override
   protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
-    trace("onLayout, child count=" + getChildCount());
-    if (getChildCount() == 0)
+    trace("onLayout");
+    if (mSurfaceView == null)
       return;
 
-    View child = getChildAt(0);
+    View child = mSurfaceView;
 
     int width = right - left;
     int height = bottom - top;
@@ -76,12 +83,11 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
   public void cameraChanged(Camera camera) {
     trace("cameraChanged to " + nameOf(camera));
     if (camera != null) {
-      if (getChildCount() != 0)
-        die("surface already active");
-
-      SurfaceView surfaceView = new SurfaceView(this.getContext());
-      addView(surfaceView);
-      surfaceView.getHolder().addCallback(this);
+      if (mSurfaceView == null) {
+        mSurfaceView = new SurfaceView(this.getContext());
+        addView(mSurfaceView);
+      }
+      mSurfaceView.getHolder().addCallback(this);
       mCamera.startPreview();
     }
   }
@@ -91,8 +97,6 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
   @Override
   public void surfaceCreated(SurfaceHolder holder) {
     trace("surfaceCreated()");
-    // The Surface has been created, acquire the mCamera and tell it where
-    // to draw.
     try {
       if (mCamera.isOpen())
         mCamera.camera().setPreviewDisplay(holder);
@@ -113,7 +117,6 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
   @Override
   public void surfaceDestroyed(SurfaceHolder holder) {
     trace("surfaceDestroyed(), camera.isOpen=" + d(mCamera.isOpen()));
-    // Surface will be destroyed when we return, so stop the preview.
     mCamera.stopPreview();
   }
 
@@ -167,4 +170,5 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
   private boolean mTrace;
   private IPoint mPreviewSize;
   private MyCamera mCamera;
+  private SurfaceView mSurfaceView;
 }
