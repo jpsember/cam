@@ -21,7 +21,7 @@ import android.hardware.Camera.Size;
  */
 public class MyCamera {
 
-  private static final boolean SIMULATED_DELAYS = true;
+  private static final boolean SIMULATED_DELAYS = false;
 
   public interface Listener {
     /**
@@ -94,16 +94,22 @@ public class MyCamera {
 
   public void startPreview() {
     trace("startPreview(); " + this);
+    if (mPreviewStarted)
+      return;
     if (!isOpen())
       return;
     mCamera.startPreview();
+    mPreviewStarted = true;
   }
 
   public void stopPreview() {
     trace("stopPreview(); " + this);
+    if (!mPreviewStarted)
+      return;
     if (!isOpen())
       return;
     mCamera.stopPreview();
+    mPreviewStarted = false;
   }
 
   public void close() {
@@ -266,4 +272,5 @@ public class MyCamera {
   private State mState;
   private String mFailureMessage;
   private Listener mListener;
+  private boolean mPreviewStarted;
 }

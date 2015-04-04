@@ -79,8 +79,11 @@ public class MainActivity extends Activity {
     mPreview.setOnClickListener(new OnClickListener() {
       @Override
       public void onClick(View arg0) {
-        if (mCamera.isOpen())
+        if (mCamera.isOpen()) {
+          pr("==== having camera take picture");
           mCamera.camera().takePicture(shutterCallback, rawCallback, jpegCallback);
+          pr("==== done taking picture");
+        }
       }
     });
   }
@@ -105,21 +108,26 @@ public class MainActivity extends Activity {
 
   ShutterCallback shutterCallback = new ShutterCallback() {
     public void onShutter() {
+      pr("...onShutter callback");
     }
   };
 
   PictureCallback rawCallback = new PictureCallback() {
     public void onPictureTaken(byte[] data, Camera camera) {
-      pr("onPictureTaken - raw");
+      pr("...PictureCallback");
     }
   };
 
   PictureCallback jpegCallback = new PictureCallback() {
     public void onPictureTaken(byte[] data, Camera camera) {
-      new SaveImageTask().execute(data);
-      pr("onPictureTaken - jpeg");
+      pr("...jpegCallback");
+      warning("skipping save picture");
+      if (false) {
+        new SaveImageTask().execute(data);
+      }
+      pr("Restarting preview");
       mCamera.startPreview();
-
+      pr("done restarting preview");
     }
   };
 
