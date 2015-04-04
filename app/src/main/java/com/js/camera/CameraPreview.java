@@ -1,9 +1,15 @@
 package com.js.camera;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
 import android.hardware.Camera;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -36,6 +42,13 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
   }
 
   @Override
+  public void setBackgroundColor(int color) {
+    super.setBackgroundColor(color);
+    // Save the background color so it's available to the overlay views
+    mBackgroundColor = color;
+  }
+
+  @Override
   protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
     // We purposely disregard child measurements because act as a
     // wrapper to a SurfaceView that centers the mCamera preview instead
@@ -56,6 +69,8 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
     innerRect.apply(MyMath.calcRectFitRectTransform(innerRect, outerRect));
     mSurfaceView.layout((int) innerRect.x, (int) innerRect.y,
         (int) innerRect.endX(), (int) innerRect.endY());
+
+    layoutOverlayViews(innerRect);
   }
 
   // ------------- MyCamera.Listener interface
@@ -67,6 +82,8 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
         mSurfaceView = new SurfaceView(this.getContext());
         addView(mSurfaceView);
         mSurfaceView.getHolder().addCallback(this);
+        // Construct overlay views last, since they should appear in front
+        constructOverlayViews();
       }
       mCamera.startPreview();
     }
@@ -153,10 +170,150 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
       pr("-- CameraPreview --: " + msg);
   }
 
+  /**
+   * View subclass for rendering things on top of the camera preview SurfaceView
+   */
+  private static class OverlayView extends View {
+    public OverlayView(Context context, int parentBackgroundColor) {
+      super(context);
+      mParentBackgroundColor = parentBackgroundColor;
+      // Make this view's background color transparent
+      setBackgroundColor(0x00ffffff);
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+      prepareGraphicElements(canvas);
+      Rect r = sRect;
+      r.setTo(0, 0, getWidth(), getHeight());
+
+      // Two different approaches
+
+      if (true) {
+        // Fill the exterior of the rectangle with the background color,
+        // then use PorterDuff CLEAR mode to fill the interior of the (rounded)
+        // rectangle with transparent color
+        sCanvas.drawRect(r.x, r.y, r.width, r.height, sFillBgndPaint);
+        fillRoundedRect(r, sTransparentPaint);
+      } else {
+        // Paint just the exterior of the rounded corners with the background color.
+        // This approach lets us use just four very small overlaid views corresponding
+        // to the corners, instead of a large view the same size as the SurfaceView;
+        // but who knows whether this 'optimization' actually helps under the hood
+        for (int c = 0; c < 4; c++)
+          paintRoundedCorner(r, c);
+      }
+      // Don't retain reference to canvas
+      prepareGraphicElements(null);
+    }
+
+    /**
+     * Prepare the graphics elements, some of which are lazy-initialized.
+     * We are encouraged not to construct objects during rendering
+     */
+    private void prepareGraphicElements(Canvas canvas) {
+      sCanvas = canvas;
+
+      if (sRect == null) {
+        sRect = new Rect();
+        sPath = new Path();
+        Paint paint = new Paint();
+        paint.setStyle(Paint.Style.FILL);
+        sFillBgndPaint = paint;
+
+        paint = new Paint();
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(0x00ffffff);
+        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
+        sTransparentPaint = paint;
+      }
+      sFillBgndPaint.setColor(mParentBackgroundColor);
+    }
+
+    private static final float CORNER_RADIUS = 30.0f;
+
+    /**
+     * Paint the outside of a rounded corner
+     *
+     * @param rect   rectangle containing corner
+     * @param corner index of corner 0: bottom left, ccw to 3: top left
+     */
+    private static void paintRoundedCorner(Rect rect, int corner) {
+      float radius = CORNER_RADIUS;
+      float x0, x1;
+      float y0, y1;
+      if (corner < 2) {
+        y0 = rect.y;
+        y1 = y0 + radius;
+      } else {
+        y0 = rect.endY();
+        y1 = y0 - radius;
+      }
+      if ((corner & 1) == 0) {
+        x0 = rect.x;
+        x1 = x0 + radius;
+      } else {
+        x0 = rect.endX();
+        x1 = x0 - radius;
+      }
+      Path path = sPath;
+      path.reset();
+      path.moveTo(x0, y0);
+      path.lineTo(x1, y0);
+      path.quadTo(x0, y0, x0, y1);
+      path.lineTo(x0, y0);
+      sCanvas.drawPath(path, sFillBgndPaint);
+    }
+
+    /**
+     * Paint the interior of a rounded rectangle
+     */
+    private static void fillRoundedRect(Rect rect,
+                                        Paint paint) {
+      float radius = CORNER_RADIUS;
+      Path path = sPath;
+      path.reset();
+      path.moveTo(rect.x + radius, rect.y);
+      path.lineTo(rect.endX() - radius, rect.y);
+      path.quadTo(rect.endX(), rect.y, rect.endX(), rect.y + radius);
+      path.lineTo(rect.endX(), rect.endY() - radius);
+      path.quadTo(rect.endX(), rect.endY(), rect.endX() - radius, rect.endY());
+      path.lineTo(rect.x + radius, rect.endY());
+      path.quadTo(rect.x, rect.endY(), rect.x, rect.endY() - radius);
+      path.lineTo(rect.x, rect.y + radius);
+      path.quadTo(rect.x, rect.y, rect.x + radius, rect.y);
+      sCanvas.drawPath(path, paint);
+    }
+
+    // Pre-prepared fields for performing onDraw()
+    private static Canvas sCanvas;
+    private static Rect sRect;
+    private static Path sPath;
+    private static Paint sFillBgndPaint;
+    private static Paint sTransparentPaint;
+    private int mParentBackgroundColor;
+  }
+
+  private void constructOverlayViews() {
+    View view = new OverlayView(getContext(), mBackgroundColor);
+    mOverlayViews.add(view);
+    this.addView(view);
+  }
+
+  private void layoutOverlayViews(Rect r) {
+    for (View view : mOverlayViews) {
+      view.layout((int) r.x, (int) r.y,
+          (int) r.endX(), (int) r.endY());
+    }
+  }
+
   private boolean mTrace;
   private MyCamera mCamera;
   // The SurfaceView that will display the camera preview
   private SurfaceView mSurfaceView;
+  // Overlaid views to appear above the surface view
+  private List<View> mOverlayViews = new ArrayList();
   // The preview size, one of the candidate sizes provided by the camera.
   private IPoint mPreviewSize;
+  private int mBackgroundColor;
 }

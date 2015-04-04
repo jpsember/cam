@@ -21,7 +21,7 @@ import android.hardware.Camera.Size;
  */
 public class MyCamera {
 
-  private static final boolean SIMULATED_DELAYS = true;
+  private static final boolean SIMULATED_DELAYS = false;
 
   public interface Listener {
     /**

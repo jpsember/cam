@@ -58,12 +58,14 @@ public class MainActivity extends Activity {
 
     FrameLayout cameraViewContainer = new FrameLayout(this);
     {
-      cameraViewContainer.setBackgroundColor(Color.GRAY);
+      int bgndColor = Color.DKGRAY;
+      cameraViewContainer.setBackgroundColor(bgndColor);
       cameraViewContainer.setPadding(20, 20, 20, 20);
       cameraViewContainer.addView(mPreview);
+      mPreview.setBackgroundColor(bgndColor);
     }
 
-    // Have the camera view container and the shriking views share the screen side by side
+    // Have the camera view container and the shrinking views share the screen side by side
     ShrinkingView.build(container, 1.0f);
     container.addView(cameraViewContainer, UITools.layoutParams(container, 1.0f));
     ShrinkingView.build(container, 1.0f);
