@@ -43,14 +43,8 @@ public class MainActivity extends Activity {
     requestWindowFeature(Window.FEATURE_NO_TITLE);
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
-    mCamera = new MyCamera();
-    mCamera.setActivity(this);
-
-    installPreviewCallback();
-
     setContentView(buildContentView());
 
-    Toast.makeText(this, getString(R.string.take_photo_help), Toast.LENGTH_LONG).show();
   }
 
   /**
@@ -80,31 +74,44 @@ public class MainActivity extends Activity {
     });
   }
 
+  private final static int BGND_COLOR = Color.DKGRAY;
+
   private View buildContentView() {
-    buildCameraView();
 
     // Construct a linear layout that contains the Camera view, and some other views as well
     final LinearLayout container = UITools.linearLayout(this, false);
 
-    FrameLayout cameraViewContainer = new FrameLayout(this);
+    mCameraViewContainer = new FrameLayout(this);
     {
-      int bgndColor = Color.DKGRAY;
-      cameraViewContainer.setBackgroundColor(bgndColor);
-      cameraViewContainer.setPadding(20, 20, 20, 20);
-      cameraViewContainer.addView(mPreview);
-      mPreview.setBackgroundColor(bgndColor);
+      mCameraViewContainer.setBackgroundColor(BGND_COLOR);
+      mCameraViewContainer.setPadding(20, 20, 20, 20);
     }
-
     // Have the camera view container and the shrinking views share the screen side by side
     ShrinkingView.build(container, 1.0f);
-    container.addView(cameraViewContainer, UITools.layoutParams(container, 1.0f));
+    container.addView(mCameraViewContainer, UITools.layoutParams(container, 1.0f));
 
     return container;
   }
 
+  private void resumeCamera() {
+    mCamera = new MyCamera();
+    mCamera.setActivity(this);
+    installPreviewCallback();
+    Toast.makeText(this, getString(R.string.take_photo_help), Toast.LENGTH_LONG).show();
+    buildCameraView();
+    mCameraViewContainer.addView(mPreview);
+    mCamera.open();
+  }
+
+  private void pauseCamera() {
+    mCamera.close();
+    mCamera = null;
+    mCameraViewContainer.removeView(mPreview);
+  }
 
   private void buildCameraView() {
     mPreview = new CameraPreview(this, mCamera);
+    mPreview.setBackgroundColor(BGND_COLOR);
 
     int style = 0;
     if (style >= 2) {
@@ -136,12 +143,12 @@ public class MainActivity extends Activity {
   @Override
   protected void onResume() {
     super.onResume();
-    mCamera.open();
+    resumeCamera();
   }
 
   @Override
   protected void onPause() {
-    mCamera.close();
+    pauseCamera();
     super.onPause();
   }
 
@@ -209,4 +216,5 @@ public class MainActivity extends Activity {
 
   private MyCamera mCamera;
   private CameraPreview mPreview;
+  private FrameLayout mCameraViewContainer;
 }
