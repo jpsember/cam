@@ -20,6 +20,7 @@ import android.view.View.OnClickListener;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
@@ -86,7 +87,8 @@ public class MainActivity extends Activity {
       mCameraViewContainer.setBackgroundColor(BGND_COLOR);
       mCameraViewContainer.setPadding(20, 20, 20, 20);
     }
-    // Have the camera view container and the shrinking views share the screen side by side
+    buildImageView();
+    container.addView(mImageView);
     ShrinkingView.build(container, 1.0f);
     container.addView(mCameraViewContainer, UITools.layoutParams(container, 1.0f));
 
@@ -213,7 +215,15 @@ public class MainActivity extends Activity {
 
   }
 
+  private void buildImageView() {
+    mImageView = new ImageView(this);
+    mImageView.setBackgroundColor(Color.GREEN);
+    mImageView.setLayoutParams(new LinearLayout.LayoutParams(300, LinearLayout.LayoutParams.MATCH_PARENT));
+    mImageView.setImageResource(R.drawable.ic_launcher);
+  }
+
   private MyCamera mCamera;
   private CameraPreview mPreview;
   private FrameLayout mCameraViewContainer;
+  private ImageView mImageView;
 }
