@@ -28,7 +28,7 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
 
   public CameraPreview(Context context, MyCamera camera) {
     super(context);
-//    setTrace(true);
+    setTrace(true);
     setGlassColor(TRANSPARENT_COLOR);
     setFrameStyle(FRAMESTYLE_BEVEL);
     setFrameRadius(30);
@@ -76,6 +76,10 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
     trace("onLayout");
     if (mSurfaceView == null)
       return;
+    if (!mCamera.isOpen()) {
+      warning("layout, but camera is closed");
+      return;
+    }
     mPreviewSize = calculatePreviewSize();
     Rect innerRect = new Rect(0, 0, mPreviewSize.x, mPreviewSize.y);
     Rect outerRect = new Rect(0, 0, right - left, bottom - top);

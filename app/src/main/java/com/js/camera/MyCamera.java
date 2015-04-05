@@ -34,7 +34,7 @@ public class MyCamera {
   }
 
   public MyCamera() {
-    mState = State.Start;
+    mState = State.Closed;
 //    setTrace(true);
   }
 
@@ -43,7 +43,7 @@ public class MyCamera {
   }
 
   private enum State {
-    Start, Opening, Open, Closed, Failed
+    Closed, Opening, Open, Failed
   }
 
   public void setActivity(Activity activity) {
@@ -52,20 +52,32 @@ public class MyCamera {
     doNothingAndroid();
   }
 
+  private void closeBackgroundHandler() {
+    mBackgroundHandlerActive = false;
+  }
+
+  private boolean wasBackgroundHandlerStopped() {
+    if (!mBackgroundHandlerActive)
+      trace("background handler no longer active; " + stackTrace(1, 1));
+    return !mBackgroundHandlerActive;
+  }
+
+  private void openBackgroundHandler() {
+    mUIThreadHandler = new Handler(Looper.getMainLooper());
+    HandlerThread backgroundThreadHandler = new HandlerThread("MyCamera background thread");
+    backgroundThreadHandler.start();
+    mBackgroundThreadHandler = new Handler(backgroundThreadHandler.getLooper());
+    mBackgroundHandlerActive = true;
+  }
+
   public void open() {
     assertUIThread();
-    if (mState != State.Start && mState != State.Closed)
+    if (mState != State.Closed)
       throw new IllegalStateException();
 
     trace("open()");
 
-    if (mState == State.Start) {
-      mUIThreadHandler = new Handler(Looper.getMainLooper());
-      HandlerThread backgroundThreadHandler = new HandlerThread("MyCamera background thread");
-      backgroundThreadHandler.start();
-      mBackgroundThreadHandler = new Handler(backgroundThreadHandler.getLooper());
-      unimp("close down handler when camera closed / destroyed?");
-    }
+    openBackgroundHandler();
 
     // Find preferred facing; if not found, use first camera
     int PREFERRED_FACING = Camera.CameraInfo.CAMERA_FACING_BACK;
@@ -93,8 +105,14 @@ public class MyCamera {
     mBackgroundThreadHandler.post(new Runnable() {
       public void run() {
         final Camera camera = backgroundThreadOpenCamera();
+        if (wasBackgroundHandlerStopped()) {
+          return;
+        }
         mUIThreadHandler.post(new Runnable() {
           public void run() {
+            if (wasBackgroundHandlerStopped()) {
+              return;
+            }
             processCameraReceivedFromBackgroundThread(camera);
           }
         });
@@ -160,7 +178,7 @@ public class MyCamera {
       return;
     stopPreview();
     setState(State.Closed);
-    mCamera.setPreviewCallback(null);
+    closeBackgroundHandler();
     mCamera.release();
     setCamera(null);
   }
@@ -178,6 +196,7 @@ public class MyCamera {
 
   /**
    * Get the underlying Camera object; must be open
+   * @deprecated
    */
   public Camera camera() {
     assertUIThread();
@@ -189,6 +208,8 @@ public class MyCamera {
    * Install a PreviewCallback
    */
   public void setPreviewCallback(Camera.PreviewCallback callback) {
+    if (callback == null)
+      throw new IllegalArgumentException();
     mPreviewCallback = callback;
     if (isOpen())
       mCamera.setPreviewCallback(mPreviewCallback);
@@ -353,4 +374,5 @@ public class MyCamera {
   private Camera.PreviewCallback mPreviewCallback;
   private Handler mUIThreadHandler;
   private Handler mBackgroundThreadHandler;
+  private boolean mBackgroundHandlerActive;
 }

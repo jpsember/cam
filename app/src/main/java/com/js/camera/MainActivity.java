@@ -60,6 +60,9 @@ public class MainActivity extends Activity {
     mCamera.setPreviewCallback(new Camera.PreviewCallback() {
       @Override
       public void onPreviewFrame(byte[] data, Camera camera) {
+        // Verify that camera is still open; if not, ignore (Issue #18)
+        if (!mCamera.isOpen())
+          return;
         int frameHeight = camera.getParameters().getPreviewSize().height;
         int frameWidth = camera.getParameters().getPreviewSize().width;
         if (mCounter < 4)
@@ -111,6 +114,16 @@ public class MainActivity extends Activity {
     mPreview.setOnClickListener(new OnClickListener() {
       @Override
       public void onClick(View arg0) {
+        if (true) {
+          pr("  toggling camera open/closed");
+          if (mCamera.isOpen())
+            mCamera.close();
+          else {
+            mCamera.open();
+          }
+          return;
+        }
+
         if (mCamera.isOpen()) {
           if (true) {
             pr("  toggling preview");
