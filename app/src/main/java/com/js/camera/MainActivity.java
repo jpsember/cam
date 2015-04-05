@@ -45,9 +45,37 @@ public class MainActivity extends Activity {
     mCamera = new MyCamera();
     mCamera.setActivity(this);
 
+    installPreviewCallback();
+
     setContentView(buildContentView());
 
     Toast.makeText(this, getString(R.string.take_photo_help), Toast.LENGTH_LONG).show();
+  }
+
+  /**
+   * Install a PreviewCallback for test purposes
+   */
+  private void installPreviewCallback() {
+    mCamera.setPreviewCallback(new Camera.PreviewCallback() {
+      @Override
+      public void onPreviewFrame(byte[] data, Camera camera) {
+        int frameHeight = camera.getParameters().getPreviewSize().height;
+        int frameWidth = camera.getParameters().getPreviewSize().width;
+        timeStamp("onPreviewFrame" + frameWidth + " x " + frameHeight);
+
+        // At a certain point, stop and restart the camera preview to verify
+        // that it resumes the PreviewCallback as well
+        if (mCounter++ == 50) {
+          pr("  toggling preview");
+          mCamera.stopPreview();
+          mCamera.startPreview();
+        }
+//      int rgb[] = new int[frameWidth * frameHeight];
+//      int[] myPixels = decodeYUV420SP(rgb, data, frameWidth, frameHeight);
+      }
+
+      private int mCounter;
+    });
   }
 
   private View buildContentView() {

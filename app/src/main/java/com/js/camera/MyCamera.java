@@ -116,6 +116,8 @@ public class MyCamera {
       return;
     mCamera.startPreview();
     mPreviewStarted = true;
+    if (mPreviewCallback != null)
+      mCamera.setPreviewCallback(mPreviewCallback);
   }
 
   public boolean stopPreview() {
@@ -155,6 +157,15 @@ public class MyCamera {
   public Camera camera() {
     assertOpen();
     return mCamera;
+  }
+
+  /**
+   * Install a PreviewCallback
+   */
+  public void setPreviewCallback(Camera.PreviewCallback callback) {
+    mPreviewCallback = callback;
+    if (isOpen())
+      mCamera.setPreviewCallback(mPreviewCallback);
   }
 
   private int determineDisplayOrientation() {
@@ -304,4 +315,5 @@ public class MyCamera {
   private String mFailureMessage;
   private Listener mListener;
   private boolean mPreviewStarted;
+  private Camera.PreviewCallback mPreviewCallback;
 }

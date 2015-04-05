@@ -107,12 +107,6 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
   @Override
   public void surfaceCreated(SurfaceHolder holder) {
     trace("surfaceCreated()");
-    try {
-      if (mCamera.isOpen())
-        mCamera.camera().setPreviewDisplay(holder);
-    } catch (IOException exception) {
-      die(exception);
-    }
   }
 
   @Override
@@ -123,6 +117,12 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
     if (mPreviewSize == null)
       throw new IllegalStateException();
     mCamera.setPreviewSize(mPreviewSize);
+
+    try {
+      mCamera.camera().setPreviewDisplay(holder);
+    } catch (IOException e) {
+      die(e);
+    }
     mCamera.startPreview();
   }
 
