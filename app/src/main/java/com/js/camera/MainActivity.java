@@ -128,8 +128,7 @@ public class MainActivity extends Activity {
         if (mCamera.isOpen()) {
           if (true) {
             pr("  toggling preview");
-            mCamera.stopPreview();
-            mCamera.startPreview();
+            mCamera.setPreviewStarted(!mCamera.isPreviewStarted());
             return;
           }
           pr("==== having camera take picture");

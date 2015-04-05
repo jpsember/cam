@@ -127,6 +127,11 @@ public class MyCamera {
     }
   }
 
+  public boolean isPreviewStarted() {
+    assertOpen();
+    return mPreviewStarted;
+  }
+
   /**
    * Start the preview, if it is not already; ignored if camera isn't open
    */
