@@ -61,7 +61,8 @@ public class MainActivity extends Activity {
       public void onPreviewFrame(byte[] data, Camera camera) {
         int frameHeight = camera.getParameters().getPreviewSize().height;
         int frameWidth = camera.getParameters().getPreviewSize().width;
-        timeStamp("onPreviewFrame" + frameWidth + " x " + frameHeight);
+        if (mCounter < 150)
+          timeStamp("onPreviewFrame" + frameWidth + " x " + frameHeight);
 
         // At a certain point, stop and restart the camera preview to verify
         // that it resumes the PreviewCallback as well
@@ -104,7 +105,7 @@ public class MainActivity extends Activity {
   private void buildCameraView() {
     mPreview = new CameraPreview(this, mCamera);
 
-    int style = 0;
+    int style = 2;
     if (style >= 2) {
       mPreview.setGlassColor(0xc0600000);
       mPreview.setFrameRadius(50);

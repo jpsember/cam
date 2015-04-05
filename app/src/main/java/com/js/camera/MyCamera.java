@@ -135,8 +135,9 @@ public class MyCamera {
     if (!isOpen())
       return;
     stopPreview();
-    mCamera.release();
     setState(State.Closed);
+    mCamera.setPreviewCallback(null);
+    mCamera.release();
     setCamera(null);
   }
 
