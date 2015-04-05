@@ -37,6 +37,7 @@ public class MainActivity extends Activity {
     startApp(this);
     AppPreferences.prepare(this);
     doNothingAndroid();
+    timeStamp("MainActivity created, thread:" + nameOf(Thread.currentThread()));
 
     super.onCreate(savedInstanceState);
     requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -61,16 +62,9 @@ public class MainActivity extends Activity {
       public void onPreviewFrame(byte[] data, Camera camera) {
         int frameHeight = camera.getParameters().getPreviewSize().height;
         int frameWidth = camera.getParameters().getPreviewSize().width;
-        if (mCounter < 150)
-          timeStamp("onPreviewFrame" + frameWidth + " x " + frameHeight);
-
-        // At a certain point, stop and restart the camera preview to verify
-        // that it resumes the PreviewCallback as well
-        if (mCounter++ == 50) {
-          pr("  toggling preview");
-          mCamera.stopPreview();
-          mCamera.startPreview();
-        }
+        if (mCounter < 4)
+          timeStamp("onPreviewFrame" + frameWidth + " x " + frameHeight + " " + nameOf(Thread.currentThread()));
+        mCounter++;
 //      int rgb[] = new int[frameWidth * frameHeight];
 //      int[] myPixels = decodeYUV420SP(rgb, data, frameWidth, frameHeight);
       }
@@ -118,6 +112,12 @@ public class MainActivity extends Activity {
       @Override
       public void onClick(View arg0) {
         if (mCamera.isOpen()) {
+          if (true) {
+            pr("  toggling preview");
+            mCamera.stopPreview();
+            mCamera.startPreview();
+            return;
+          }
           pr("==== having camera take picture");
           mCamera.camera().takePicture(shutterCallback, rawCallback, jpegCallback);
           pr("==== done taking picture");

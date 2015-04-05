@@ -2,7 +2,9 @@ package com.js.camera;
 
 import android.app.Activity;
 import android.hardware.Camera;
-import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
 import android.view.Surface;
 
 import com.js.basic.IPoint;
@@ -51,10 +53,19 @@ public class MyCamera {
   }
 
   public void open() {
+    assertUIThread();
     if (mState != State.Start && mState != State.Closed)
       throw new IllegalStateException();
 
     trace("open()");
+
+    if (mState == State.Start) {
+      mUIThreadHandler = new Handler(Looper.getMainLooper());
+      HandlerThread backgroundThreadHandler = new HandlerThread("MyCamera background thread");
+      backgroundThreadHandler.start();
+      mBackgroundThreadHandler = new Handler(backgroundThreadHandler.getLooper());
+      unimp("close down handler when camera closed / destroyed?");
+    }
 
     // Find preferred facing; if not found, use first camera
     int PREFERRED_FACING = Camera.CameraInfo.CAMERA_FACING_BACK;
@@ -78,9 +89,18 @@ public class MyCamera {
 
     mCameraId = preferredCameraId;
     setState(State.Opening);
-    new OpenCameraTask().execute();
-  }
 
+    mBackgroundThreadHandler.post(new Runnable() {
+      public void run() {
+        final Camera camera = backgroundThreadOpenCamera();
+        mUIThreadHandler.post(new Runnable() {
+          public void run() {
+            processCameraReceivedFromBackgroundThread(camera);
+          }
+        });
+      }
+    });
+  }
 
   private void setState(State state) {
     if (mState != state) {
@@ -97,7 +117,8 @@ public class MyCamera {
    * Set the preview started state; ignored if camera isn't open
    */
   public void setPreviewStarted(boolean state) {
-    trace("setPreviewStarted(" + state + "); " + this + "\n" + stackTrace(0, 10));
+    assertUIThread();
+    trace("setPreviewStarted(" + state + "); " + this);
     if (!state) {
       stopPreview();
     } else {
@@ -109,6 +130,7 @@ public class MyCamera {
    * Start the preview, if it is not already; ignored if camera isn't open
    */
   public void startPreview() {
+    assertUIThread();
     trace("setPreviewStarted(); " + this + " started=" + d(mPreviewStarted));
     if (mPreviewStarted)
       return;
@@ -121,6 +143,7 @@ public class MyCamera {
   }
 
   public boolean stopPreview() {
+    assertUIThread();
     trace("stopPreview(); " + this);
     boolean wasStarted = mPreviewStarted;
     if (mPreviewStarted) {
@@ -131,6 +154,7 @@ public class MyCamera {
   }
 
   public void close() {
+    assertUIThread();
     trace("close()");
     if (!isOpen())
       return;
@@ -156,6 +180,7 @@ public class MyCamera {
    * Get the underlying Camera object; must be open
    */
   public Camera camera() {
+    assertUIThread();
     assertOpen();
     return mCamera;
   }
@@ -207,9 +232,18 @@ public class MyCamera {
       warning("Turning tracing on");
   }
 
+  private static boolean isUIThread() {
+    return Thread.currentThread() == Looper.getMainLooper().getThread();
+  }
+
   private void trace(Object msg) {
-    if (mTrace)
-      pr("--      MyCamera --: " + msg);
+    if (mTrace) {
+      String threadMessage = "";
+      if (!isUIThread()) {
+        threadMessage = "(" + nameOf(Thread.currentThread()) + ") ";
+      }
+      pr("--      MyCamera " + threadMessage + "--: " + msg);
+    }
   }
 
   /**
@@ -219,7 +253,7 @@ public class MyCamera {
     assertOpen();
     Camera.Parameters parameters = mCamera.getParameters();
     List<Size> sizes = parameters.getSupportedPreviewSizes();
-    List<IPoint> output = new ArrayList();
+    List<IPoint> output = new ArrayList<IPoint>();
     for (Size size : sizes) {
       output.add(new IPoint(size.width, size.height));
     }
@@ -262,42 +296,36 @@ public class MyCamera {
     trace("Failed with message " + message);
   }
 
-  /**
-   * AsyncTask to open the camera, which according to the documentation
-   * is potentially time consuming
-   */
-  private class OpenCameraTask extends AsyncTask<Void, Void, Camera> {
+  private Camera backgroundThreadOpenCamera() {
+    trace("backgroundThreadOpenCamera");
+    if (SIMULATED_DELAYS)
+      sleepFor(1200);
 
-    protected Camera doInBackground(Void... params) {
-      if (SIMULATED_DELAYS)
-        sleepFor(1200);
-
-      int preferredCameraId = mCameraId;
-      Camera camera = null;
-      try {
-        camera = Camera.open(preferredCameraId);
-      } catch (RuntimeException e) {
-        warning("Failed to open camera: " + d(e));
-      }
-
-      if (SIMULATED_DELAYS)
-        sleepFor(1200);
-
-      return camera;
+    int preferredCameraId = mCameraId;
+    Camera camera = null;
+    try {
+      camera = Camera.open(preferredCameraId);
+    } catch (RuntimeException e) {
+      warning("Failed to open camera: " + d(e));
     }
 
-    protected void onPostExecute(Camera camera) {
-      if (camera == null) {
-        setFailed("Opening camera");
-        return;
-      }
+    if (SIMULATED_DELAYS)
+      sleepFor(1200);
+    return camera;
+  }
 
-      setState(State.Open);
-      camera.setDisplayOrientation(determineDisplayOrientation());
-
-      // Set the camera, and give listener an opportunity to e.g. start preview
-      setCamera(camera);
+  private void processCameraReceivedFromBackgroundThread(Camera camera) {
+    trace("processCameraReceived " + nameOf(camera));
+    if (camera == null) {
+      setFailed("Opening camera");
+      return;
     }
+
+    setState(State.Open);
+    camera.setDisplayOrientation(determineDisplayOrientation());
+
+    // Set the camera, and give listener an opportunity to e.g. start preview
+    setCamera(camera);
   }
 
   private void setCamera(Camera camera) {
@@ -306,6 +334,12 @@ public class MyCamera {
       if (mListener != null)
         mListener.cameraChanged(mCamera);
     }
+  }
+
+  private void assertUIThread() {
+    if (isUIThread())
+      return;
+    throw new IllegalStateException("Attempt to call from non-UI thread " + nameOf(Thread.currentThread()));
   }
 
   private Camera mCamera;
@@ -317,4 +351,6 @@ public class MyCamera {
   private Listener mListener;
   private boolean mPreviewStarted;
   private Camera.PreviewCallback mPreviewCallback;
+  private Handler mUIThreadHandler;
+  private Handler mBackgroundThreadHandler;
 }
