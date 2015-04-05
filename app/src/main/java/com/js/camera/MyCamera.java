@@ -274,6 +274,8 @@ public class MyCamera {
     Camera.Parameters parameters = mCamera.getParameters();
     parameters.setPreviewSize(size.x, size.y);
     setParameters(parameters);
+    mPreviewSize = new IPoint(size);
+    mPreviewFormat = parameters.getPreviewFormat();
   }
 
   private void setParameters(Camera.Parameters parameters) {
@@ -356,6 +358,19 @@ public class MyCamera {
     throw new IllegalStateException("Attempt to call from non-UI thread " + nameOf(Thread.currentThread()));
   }
 
+  /**
+   * Get size of preview; thread safe.
+   *
+   * @return preview size, or null if it is not yet known
+   */
+  public IPoint getPreviewSize() {
+    return mPreviewSize;
+  }
+
+  public int getPreviewFormat() {
+    return mPreviewFormat;
+  }
+
   private Camera mCamera;
   private int mCameraId;
   private Activity mActivity;
@@ -367,4 +382,8 @@ public class MyCamera {
   private Camera.PreviewCallback mPreviewCallback;
   private Handler mUIThreadHandler;
   private Handler mBackgroundThreadHandler;
+
+  // These fields may be read and written from different threads:
+  private IPoint mPreviewSize;
+  private int mPreviewFormat;
 }

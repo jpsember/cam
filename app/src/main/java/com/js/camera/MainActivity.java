@@ -7,7 +7,9 @@ import java.io.IOException;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Camera.ShutterCallback;
@@ -15,6 +17,8 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.Window;
@@ -26,6 +30,7 @@ import android.widget.Toast;
 
 import com.js.android.AppPreferences;
 import com.js.android.UITools;
+import com.js.basic.IPoint;
 import com.js.camera.camera.R;
 
 import static com.js.basic.Tools.*;
@@ -45,6 +50,7 @@ public class MainActivity extends Activity {
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
     setContentView(buildContentView());
+    mUIThreadHandler = new Handler(Looper.getMainLooper());
 
   }
 
@@ -52,27 +58,74 @@ public class MainActivity extends Activity {
    * Install a PreviewCallback for test purposes
    */
   private void installPreviewCallback() {
-    mCamera.setPreviewCallback(new Camera.PreviewCallback() {
+    final MyCamera previewCamera = mCamera;
+    previewCamera.setPreviewCallback(new Camera.PreviewCallback() {
       @Override
       public void onPreviewFrame(byte[] data, Camera camera) {
         // This is running in a different thread!  We must
         // verify that the camera is still open, and avoid using
         // getParameters() or other methods that are not threadsafe
-
-        // Verify that camera is still open; if not, ignore (Issue #18)
-        if (!mCamera.isOpen())
+        IPoint previewSize = previewCamera.getPreviewSize();
+        if (mCounter++ <= 4)
+          timeStamp("onPreviewFrame, size " + previewSize + " " + nameOf(Thread.currentThread()));
+        if (previewSize == null)
           return;
-        int frameHeight = camera.getParameters().getPreviewSize().height;
-        int frameWidth = camera.getParameters().getPreviewSize().width;
-        if (mCounter < 4)
-          timeStamp("onPreviewFrame" + frameWidth + " x " + frameHeight + " " + nameOf(Thread.currentThread()));
-        mCounter++;
-//      int rgb[] = new int[frameWidth * frameHeight];
-//      int[] myPixels = decodeYUV420SP(rgb, data, frameWidth, frameHeight);
+
+        if (mCounter % 40 != 0)
+          return;
+
+        int format = previewCamera.getPreviewFormat();
+        if (format != ImageFormat.NV21)
+          throw new UnsupportedOperationException("Unsupported preview image format: " + format);
+
+        int rgba[] = new int[previewSize.x * previewSize.y * 2];
+        decodeYUV420SP(rgba, data, previewSize.x, previewSize.y);
+
+        final Bitmap bitmap = Bitmap.createBitmap(rgba, previewSize.x, previewSize.y, Bitmap.Config.ARGB_8888);
+        mUIThreadHandler.post(new Runnable() {
+          public void run() {
+            mImageView.setImageBitmap(bitmap);
+          }
+        });
       }
 
       private int mCounter;
     });
+  }
+
+  /**
+   * Decode YUV 4:2:0 bitmap to ARGB_8888 format.
+   * Note that a (fully opaque) alpha channel is added;
+   * if we omit this, I can't then see how to create a Bitmap from the result
+   */
+  private static void decodeYUV420SP(int[] argb, byte[] yuv420sp, int width, int height) {
+    final int frameSize = width * height;
+
+    for (int j = 0, yp = 0; j < height; j++) {
+      int uvp = frameSize + (j >> 1) * width, u = 0, v = 0;
+      for (int i = 0; i < width; i++, yp++) {
+        int y = (0xff & ((int) yuv420sp[yp])) - 16;
+        if (y < 0) y = 0;
+        if ((i & 1) == 0) {
+          v = (0xff & yuv420sp[uvp++]) - 128;
+          u = (0xff & yuv420sp[uvp++]) - 128;
+        }
+
+        int y1192 = 1192 * y;
+        int r = (y1192 + 1634 * v);
+        int g = (y1192 - 833 * v - 400 * u);
+        int b = (y1192 + 2066 * u);
+
+        if (r < 0) r = 0;
+        else if (r > 262143) r = 262143;
+        if (g < 0) g = 0;
+        else if (g > 262143) g = 262143;
+        if (b < 0) b = 0;
+        else if (b > 262143) b = 262143;
+
+        argb[yp] = 0xff000000 | ((r << 6) & 0xff0000) | ((g >> 2) & 0xff00) | ((b >> 10) & 0xff);
+      }
+    }
   }
 
   private final static int BGND_COLOR = Color.DKGRAY;
@@ -85,7 +138,7 @@ public class MainActivity extends Activity {
     mCameraViewContainer = new FrameLayout(this);
     {
       mCameraViewContainer.setBackgroundColor(BGND_COLOR);
-      mCameraViewContainer.setPadding(20, 20, 20, 20);
+      mCameraViewContainer.setPadding(10, 10, 10, 10);
     }
     buildImageView();
     container.addView(mImageView);
@@ -115,7 +168,7 @@ public class MainActivity extends Activity {
     mPreview = new CameraPreview(this, mCamera);
     mPreview.setBackgroundColor(BGND_COLOR);
 
-    int style = 0;
+    int style = 2;
     if (style >= 2) {
       mPreview.setGlassColor(0xc0600000);
       mPreview.setFrameRadius(50);
@@ -217,8 +270,8 @@ public class MainActivity extends Activity {
 
   private void buildImageView() {
     mImageView = new ImageView(this);
-    mImageView.setBackgroundColor(Color.GREEN);
-    mImageView.setLayoutParams(new LinearLayout.LayoutParams(300, LinearLayout.LayoutParams.MATCH_PARENT));
+    mImageView.setBackgroundColor(UITools.debugColor());
+    mImageView.setLayoutParams(new LinearLayout.LayoutParams(240, LinearLayout.LayoutParams.MATCH_PARENT));
     mImageView.setImageResource(R.drawable.ic_launcher);
   }
 
@@ -226,4 +279,5 @@ public class MainActivity extends Activity {
   private CameraPreview mPreview;
   private FrameLayout mCameraViewContainer;
   private ImageView mImageView;
+  private Handler mUIThreadHandler;
 }

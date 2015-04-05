@@ -7,6 +7,10 @@ public final class IPoint {
   public IPoint() {
   }
 
+  public IPoint(IPoint source) {
+    this(source.x,source.y);
+  }
+
   public IPoint(float x, float y) {
     this.x = (int) x;
     this.y = (int) y;
