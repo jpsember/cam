@@ -34,8 +34,8 @@ public class MyCamera {
   }
 
   public MyCamera() {
-    mState = State.Closed;
-//    setTrace(true);
+    mState = State.Start;
+    setTrace(true);
   }
 
   public void setListener(Listener listener) {
@@ -43,7 +43,7 @@ public class MyCamera {
   }
 
   private enum State {
-    Closed, Opening, Open, Failed
+    Start, Opening, Open, Closed, Failed
   }
 
   public void setActivity(Activity activity) {
@@ -52,27 +52,16 @@ public class MyCamera {
     doNothingAndroid();
   }
 
-  private void closeBackgroundHandler() {
-    mBackgroundHandlerActive = false;
-  }
-
-  private boolean wasBackgroundHandlerStopped() {
-    if (!mBackgroundHandlerActive)
-      trace("background handler no longer active; " + stackTrace(1, 1));
-    return !mBackgroundHandlerActive;
-  }
-
   private void openBackgroundHandler() {
     mUIThreadHandler = new Handler(Looper.getMainLooper());
     HandlerThread backgroundThreadHandler = new HandlerThread("MyCamera background thread");
     backgroundThreadHandler.start();
     mBackgroundThreadHandler = new Handler(backgroundThreadHandler.getLooper());
-    mBackgroundHandlerActive = true;
   }
 
   public void open() {
     assertUIThread();
-    if (mState != State.Closed)
+    if (mState != State.Start)
       throw new IllegalStateException();
 
     trace("open()");
@@ -105,14 +94,8 @@ public class MyCamera {
     mBackgroundThreadHandler.post(new Runnable() {
       public void run() {
         final Camera camera = backgroundThreadOpenCamera();
-        if (wasBackgroundHandlerStopped()) {
-          return;
-        }
         mUIThreadHandler.post(new Runnable() {
           public void run() {
-            if (wasBackgroundHandlerStopped()) {
-              return;
-            }
             processCameraReceivedFromBackgroundThread(camera);
           }
         });
@@ -178,7 +161,6 @@ public class MyCamera {
       return;
     stopPreview();
     setState(State.Closed);
-    closeBackgroundHandler();
     mCamera.release();
     setCamera(null);
   }
@@ -196,6 +178,7 @@ public class MyCamera {
 
   /**
    * Get the underlying Camera object; must be open
+   *
    * @deprecated
    */
   public Camera camera() {
@@ -341,6 +324,11 @@ public class MyCamera {
       setFailed("Opening camera");
       return;
     }
+    // If state is unexpected, app may have shut down or something
+    if (mState != State.Opening) {
+      warning("Stale state: " + this);
+      return;
+    }
 
     setState(State.Open);
     camera.setDisplayOrientation(determineDisplayOrientation());
@@ -374,5 +362,4 @@ public class MyCamera {
   private Camera.PreviewCallback mPreviewCallback;
   private Handler mUIThreadHandler;
   private Handler mBackgroundThreadHandler;
-  private boolean mBackgroundHandlerActive;
 }

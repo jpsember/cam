@@ -60,6 +60,10 @@ public class MainActivity extends Activity {
     mCamera.setPreviewCallback(new Camera.PreviewCallback() {
       @Override
       public void onPreviewFrame(byte[] data, Camera camera) {
+        // This is running in a different thread!  We must
+        // verify that the camera is still open, and avoid using
+        // getParameters() or other methods that are not threadsafe
+
         // Verify that camera is still open; if not, ignore (Issue #18)
         if (!mCamera.isOpen())
           return;
@@ -102,7 +106,7 @@ public class MainActivity extends Activity {
   private void buildCameraView() {
     mPreview = new CameraPreview(this, mCamera);
 
-    int style = 2;
+    int style = 0;
     if (style >= 2) {
       mPreview.setGlassColor(0xc0600000);
       mPreview.setFrameRadius(50);
@@ -114,16 +118,6 @@ public class MainActivity extends Activity {
     mPreview.setOnClickListener(new OnClickListener() {
       @Override
       public void onClick(View arg0) {
-        if (true) {
-          pr("  toggling camera open/closed");
-          if (mCamera.isOpen())
-            mCamera.close();
-          else {
-            mCamera.open();
-          }
-          return;
-        }
-
         if (mCamera.isOpen()) {
           if (true) {
             pr("  toggling preview");
