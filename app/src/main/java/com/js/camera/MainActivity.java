@@ -75,7 +75,14 @@ public class MainActivity extends Activity {
 
   private void buildCameraView() {
     mPreview = new CameraPreview(this, mCamera);
-    mPreview.setGlassColor(0xc0600000);
+
+    int style = 0;
+    if (style >= 2) {
+      mPreview.setGlassColor(0xc0600000);
+      mPreview.setFrameRadius(50);
+    }
+    if (style % 2 != 0)
+      mPreview.setFrameStyle(CameraPreview.FRAMESTYLE_NONE);
 
     mPreview.setKeepScreenOn(true);
     mPreview.setOnClickListener(new OnClickListener() {

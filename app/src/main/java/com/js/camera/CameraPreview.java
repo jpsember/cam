@@ -30,6 +30,9 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
     super(context);
 //    setTrace(true);
     setGlassColor(TRANSPARENT_COLOR);
+    setFrameStyle(FRAMESTYLE_BEVEL);
+    setFrameRadius(30);
+
     mCamera = camera;
     camera.setListener(this);
 
@@ -92,8 +95,8 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
         mSurfaceView = new SurfaceView(this.getContext());
         addView(mSurfaceView);
         mSurfaceView.getHolder().addCallback(this);
-        // Construct overlay views last, since they should appear in front
-        constructOverlayViews();
+        // Construct overlay view last, since it should appear in front
+        constructOverlayView();
       }
       mCamera.startPreview();
     }
@@ -180,12 +183,16 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
       pr("-- CameraPreview --: " + msg);
   }
 
-  private void constructOverlayViews() {
-    mOverlayView = new OverlayView(this);
-    addView(mOverlayView);
+  private void constructOverlayView() {
+    if (mFrameStyle != FRAMESTYLE_NONE || mOverlayGlassColor != TRANSPARENT_COLOR) {
+      mOverlayView = new OverlayView(this);
+      addView(mOverlayView);
+    }
   }
 
   private void layoutOverlayViews(Rect r) {
+    if (mOverlayView == null)
+      return;
     mOverlayView.layout((int) r.x, (int) r.y,
         (int) r.endX(), (int) r.endY());
   }
@@ -206,11 +213,15 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
       Rect r = sRect;
       r.setTo(0, 0, getWidth(), getHeight());
 
-      // Fill the exterior of the rectangle with the background color,
-      // then use PorterDuff CLEAR mode to fill the interior of the (rounded)
-      // rectangle with transparent color
-      sCanvas.drawRect(r.x, r.y, r.width, r.height, sFillBgndPaint);
-      fillRoundedRect(r, sTransparentPaint);
+      if (mContainer.mFrameStyle == FRAMESTYLE_BEVEL) {
+        // Fill the exterior of the rectangle with the background color,
+        // then use PorterDuff CLEAR mode to fill the interior of the (rounded)
+        // rectangle with transparent color
+        sCanvas.drawRect(r.x, r.y, r.width, r.height, sFramePaint);
+        fillRoundedRect(r, sGlassPaint);
+      } else {
+        sCanvas.drawRect(r.x, r.y, r.width, r.height, sGlassPaint);
+      }
 
       // Don't retain reference to canvas
       prepareGraphicElements(null);
@@ -228,25 +239,23 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
         sPath = new Path();
         Paint paint = new Paint();
         paint.setStyle(Paint.Style.FILL);
-        sFillBgndPaint = paint;
+        sFramePaint = paint;
 
         paint = new Paint();
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(mContainer.mOverlayGlassColor);
         paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC));
-        sTransparentPaint = paint;
+        sGlassPaint = paint;
       }
-      sFillBgndPaint.setColor(mContainer.mBackgroundColor);
+      sFramePaint.setColor(mContainer.mBackgroundColor);
     }
-
-    private static final float CORNER_RADIUS = 30.0f;
 
     /**
      * Paint the interior of a rounded rectangle
      */
-    private static void fillRoundedRect(Rect rect,
-                                        Paint paint) {
-      float radius = CORNER_RADIUS;
+    private void fillRoundedRect(Rect rect,
+                                 Paint paint) {
+      float radius = mContainer.mFrameRadius;
       Path path = sPath;
       path.reset();
       path.moveTo(rect.x + radius, rect.y);
@@ -265,8 +274,8 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
     private static Canvas sCanvas;
     private static Rect sRect;
     private static Path sPath;
-    private static Paint sFillBgndPaint;
-    private static Paint sTransparentPaint;
+    private static Paint sFramePaint;
+    private static Paint sGlassPaint;
     private CameraPreview mContainer;
   }
 
@@ -274,6 +283,18 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
     assertInitializing();
     mOverlayGlassColor = color;
   }
+
+  public void setFrameStyle(int style) {
+    assertInitializing();
+    mFrameStyle = style;
+  }
+
+  public void setFrameRadius(float radius) {
+    assertInitializing();
+    mFrameRadius = radius;
+  }
+
+  public static final int FRAMESTYLE_NONE = 0, FRAMESTYLE_BEVEL = 1;
 
   private static final int TRANSPARENT_COLOR = 0x00ffffff;
 
@@ -287,4 +308,6 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
   private IPoint mPreviewSize;
   private int mBackgroundColor;
   private int mOverlayGlassColor;
+  private int mFrameStyle;
+  private float mFrameRadius;
 }
