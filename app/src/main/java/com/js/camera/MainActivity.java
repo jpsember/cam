@@ -65,25 +65,26 @@ public class MainActivity extends Activity {
         // This is running in a different thread!  We must
         // verify that the camera is still open, and avoid using
         // getParameters() or other methods that are not threadsafe
-        IPoint previewSize = previewCamera.getPreviewSize();
+        MyCamera.Properties properties = previewCamera.getProperties();
+
+        IPoint previewSize = properties.previewSize();
         if (mCounter++ <= 4)
-          timeStamp("onPreviewFrame, size " + previewSize + " " + nameOf(Thread.currentThread()));
+          timeStamp("onPreviewFrame, previewSize " + previewSize + " " + nameOf(Thread.currentThread()));
         if (previewSize == null)
           return;
 
         if (mCounter % 40 != 0)
           return;
 
-        int format = previewCamera.getPreviewFormat();
-        if (format != ImageFormat.NV21)
-          throw new UnsupportedOperationException("Unsupported preview image format: " + format);
+        if (properties.format() != ImageFormat.NV21)
+          throw new UnsupportedOperationException("Unsupported preview image format: " + properties.format());
 
         int rgba[] = new int[previewSize.x * previewSize.y * 2];
         decodeYUV420SP(rgba, data, previewSize.x, previewSize.y);
 
         Bitmap bitmap = Bitmap.createBitmap(rgba, previewSize.x, previewSize.y, Bitmap.Config.ARGB_8888);
 
-        int rotation = previewCamera.getPreviewRotation();
+        int rotation = properties.rotation();
         if (rotation != 0) {
           Matrix matrix = new Matrix();
           matrix.postRotate(rotation);

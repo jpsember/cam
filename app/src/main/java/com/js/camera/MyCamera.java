@@ -7,6 +7,7 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.view.Surface;
 
+import com.js.basic.Freezable;
 import com.js.basic.IPoint;
 
 import java.util.ArrayList;
@@ -269,13 +270,23 @@ public class MyCamera {
     return output;
   }
 
+  private Properties buildProperties() {
+    Properties p = mProperties;
+    if (p == null)
+      p = new Properties();
+    return p;
+  }
+
   public void setPreviewSize(IPoint size) {
     assertOpen();
     Camera.Parameters parameters = mCamera.getParameters();
     parameters.setPreviewSize(size.x, size.y);
     setParameters(parameters);
-    mPreviewSize = new IPoint(size);
-    mPreviewFormat = parameters.getPreviewFormat();
+    Properties p = buildProperties();
+    p = mutable(p);
+    p.mSize = new IPoint(size);
+    p.mFormat = parameters.getPreviewFormat();
+    setProperties(p);
   }
 
   private void setParameters(Camera.Parameters parameters) {
@@ -338,8 +349,12 @@ public class MyCamera {
     }
 
     setState(State.Open);
-    mPreviewRotation = determineDisplayOrientation();
-    camera.setDisplayOrientation(mPreviewRotation);
+
+    Properties p = buildProperties();
+    p.mRotation = determineDisplayOrientation();
+    setProperties(p);
+
+    camera.setDisplayOrientation(p.mRotation);
 
     // Set the camera, and give listener an opportunity to e.g. start preview
     setCamera(camera);
@@ -359,21 +374,14 @@ public class MyCamera {
     throw new IllegalStateException("Attempt to call from non-UI thread " + nameOf(Thread.currentThread()));
   }
 
-  /**
-   * Get size of preview; thread safe.
-   *
-   * @return preview size, or null if it is not yet known
-   */
-  public IPoint getPreviewSize() {
-    return mPreviewSize;
+  private void setProperties(Properties p) {
+    mProperties = frozen(p);
   }
 
-  public int getPreviewFormat() {
-    return mPreviewFormat;
-  }
-
-  public int getPreviewRotation() {
-    return mPreviewRotation;
+  public Properties getProperties() {
+    if (mProperties == null)
+      throw new IllegalStateException();
+    return mProperties;
   }
 
   private Camera mCamera;
@@ -387,11 +395,47 @@ public class MyCamera {
   private Camera.PreviewCallback mPreviewCallback;
   private Handler mUIThreadHandler;
   private Handler mBackgroundThreadHandler;
+  private Properties mProperties;
 
-  // These fields may be read and written from different threads:
-  private IPoint mPreviewSize;
-  private int mPreviewFormat;
-  // Rotation, in degrees, that must be applied to the preview image
-  // in order to display it correctly to the user
-  private int mPreviewRotation;
+  /**
+   * Object containing camera preview properties; immutable for thread safety.
+   * These are derived from Camera.Parameters
+   */
+  public static class Properties extends Freezable.Mutable {
+
+    @Override
+    public Freezable getMutableCopy() {
+      Properties p = new Properties();
+      p.mFormat = mFormat;
+      p.mRotation = mRotation;
+      p.mSize = mSize;
+      return p;
+    }
+
+    /**
+     * Get value derived from Parameters.getPreviewSize()
+     */
+    public IPoint previewSize() {
+      return mSize;
+    }
+
+    /**
+     * Get value derived from Parameters.getPreviewFormat()
+     */
+    public int format() {
+      return mFormat;
+    }
+
+    /**
+     * Get the rotation, in degrees, that must be applied to the preview image
+     * in order to display it correctly to the user
+     */
+    public int rotation() {
+      return mRotation;
+    }
+
+    private IPoint mSize;
+    private int mFormat;
+    private int mRotation;
+  }
 }

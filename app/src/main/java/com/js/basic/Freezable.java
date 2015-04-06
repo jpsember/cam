@@ -43,10 +43,13 @@ public interface Freezable {
    * Concrete implementation of the Freezable interface, for objects that can be
    * mutable
    */
-  public abstract class Mutable implements Freezable {
+  public class Mutable implements Freezable {
 
     @Override
-    public abstract Freezable getMutableCopy();
+    public Freezable getMutableCopy() {
+      // Default implementation does not allow mutable copies to be constructed
+      throw new UnsupportedOperationException();
+    }
 
     @Override
     public Freezable getFrozenCopy() {
