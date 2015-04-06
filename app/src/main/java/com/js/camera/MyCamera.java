@@ -256,16 +256,14 @@ public class MyCamera {
     }
   }
 
-  @Deprecated
-  public void setPreviewSize(IPoint size) {
+  public void setPreviewSize(int sizeIndex) {
     assertOpen();
+    Properties m = mutable(mProperties);
+    IPoint size = m.setPreviewSizeIndex(sizeIndex);
+    setProperties(m);
     Camera.Parameters parameters = mCamera.getParameters();
     parameters.setPreviewSize(size.x, size.y);
     setParameters(parameters);
-    Properties p = mutable(mProperties);
-    p.mSize = new IPoint(size);
-    p.mFormat = parameters.getPreviewFormat();
-    setProperties(p);
   }
 
   private void setParameters(Camera.Parameters parameters) {
@@ -328,16 +326,20 @@ public class MyCamera {
     }
 
     setState(State.Open);
+    constructProperties(camera);
 
-    Properties p = new Properties();
-    p.mRotation = determineDisplayOrientation();
-    p.setPreviewSizes(camera.getParameters());
-    setProperties(p);
-
-    camera.setDisplayOrientation(p.mRotation);
+    camera.setDisplayOrientation(mProperties.rotation());
 
     // Set the camera, and give listener an opportunity to e.g. start preview
     setCamera(camera);
+  }
+
+  private void constructProperties(Camera camera) {
+    Properties p = new Properties();
+    p.mRotation = determineDisplayOrientation();
+    p.setPreviewSizes(camera.getParameters());
+    p.mFormat = camera.getParameters().getPreviewFormat();
+    setProperties(p);
   }
 
   private void setCamera(Camera camera) {
@@ -388,17 +390,19 @@ public class MyCamera {
       Properties p = new Properties();
       p.mFormat = mFormat;
       p.mRotation = mRotation;
-      p.mSize = mSize;
       for (IPoint pt : mPreviewSizes)
         p.mPreviewSizes.add(new IPoint(pt));
+      p.mPreviewSizeIndex = mPreviewSizeIndex;
       return p;
     }
 
     /**
-     * Get value derived from Parameters.getPreviewSize()
+     * Get selected preview size
      */
     public IPoint previewSize() {
-      return mSize;
+      if (mPreviewSizeIndex < 0)
+        throw new IllegalStateException("No preview size selected");
+      return mPreviewSizes.get(mPreviewSizeIndex);
     }
 
     /**
@@ -430,9 +434,16 @@ public class MyCamera {
       }
     }
 
+    IPoint setPreviewSizeIndex(int sizeIndex) {
+      mutate();
+      mPreviewSizeIndex = sizeIndex;
+      return mPreviewSizes.get(sizeIndex);
+    }
+
     private List<IPoint> mPreviewSizes = new ArrayList();
-    private IPoint mSize;
+    private int mPreviewSizeIndex = -1;
     private int mFormat;
     private int mRotation;
+
   }
 }

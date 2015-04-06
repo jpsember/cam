@@ -71,6 +71,15 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
     setMeasuredDimension(width, height);
   }
 
+  /**
+   * Convert a size by rotating according to camera rotation properties
+   */
+  private IPoint rotateSizeAccordingToProperties(MyCamera.Properties properties, IPoint size) {
+    if (properties.rotation() == 90 || properties.rotation() == 270)
+      size = new IPoint(size.y, size.x);
+    return size;
+  }
+
   @Override
   protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
     trace("onLayout");
@@ -80,8 +89,11 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
       warning("layout, but camera is closed");
       return;
     }
-    mPreviewSize = calculatePreviewSize();
-    Rect innerRect = new Rect(0, 0, mPreviewSize.x, mPreviewSize.y);
+    mCamera.setPreviewSize(calculatePreviewSize());
+    MyCamera.Properties properties = mCamera.getProperties();
+    IPoint size = rotateSizeAccordingToProperties(properties, properties.previewSize());
+
+    Rect innerRect = new Rect(0, 0, size.x, size.y);
     Rect outerRect = new Rect(0, 0, right - left, bottom - top);
     innerRect.apply(MyMath.calcRectFitRectTransform(innerRect, outerRect));
     mSurfaceView.layout((int) innerRect.x, (int) innerRect.y,
@@ -118,9 +130,6 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
     trace("surfaceChanged() " + mCamera + " surface size " + new IPoint(width, height));
     if (!mCamera.isOpen())
       return;
-    if (mPreviewSize == null)
-      throw new IllegalStateException();
-    mCamera.setPreviewSize(mPreviewSize);
 
     try {
       mCamera.camera().setPreviewDisplay(holder);
@@ -139,7 +148,7 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
   /**
    * Calculate the preview size, by choosing the candidate that best matches our view
    */
-  private IPoint calculatePreviewSize() {
+  private int calculatePreviewSize() {
     IPoint viewSize = new IPoint(getWidth(), getHeight());
     trace("calculatePreviewSize, container size " + viewSize);
     if (viewSize.x == 0 || viewSize.y == 0)
@@ -148,17 +157,16 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
     MyCamera.Properties properties = mCamera.getProperties();
     List<IPoint> sizes = properties.previewSizes();
     trace("sizes: " + d(sizes));
-    IPoint optimalSize = null;
+    int sizeIndex = -1;
 
     // Choose the largest preview size that will fit within us, its container.
     // Do two passes.  On the first pass, omit any preview sizes that are larger
     // than the target in either dimension
     for (int pass = 0; pass < 2; pass++) {
       int minError = Integer.MAX_VALUE / 10;
-      for (IPoint size : sizes) {
-        // Exchange coordinates if rotating by +/- 90 degrees
-        if (properties.rotation() == 90 || properties.rotation() == 270)
-          size = new IPoint(size.y,size.x);
+      for (int i = 0; i < sizes.size(); i++) {
+        IPoint size = sizes.get(i);
+        size = rotateSizeAccordingToProperties(properties, size);
 
         int widthError = size.x - viewSize.x;
         int heightError = size.y - viewSize.y;
@@ -166,19 +174,18 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
           continue;
 
         int error = Math.min(Math.abs(heightError), Math.abs(widthError));
-        if (error < minError) {
-          optimalSize = size;
+        if (sizeIndex < 0 || error < minError) {
+          sizeIndex = i;
           minError = error;
         }
       }
-      if (optimalSize != null)
+      if (sizeIndex >= 0)
         break;
     }
 
-    if (optimalSize == null)
+    if (sizeIndex < 0)
       throw new IllegalStateException();
-    trace("surfaceView size: " + optimalSize);
-    return optimalSize;
+    return sizeIndex;
   }
 
   public void setTrace(boolean state) {
@@ -313,8 +320,6 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
   private SurfaceView mSurfaceView;
   // Overlaid view to appear above the surface view
   private View mOverlayView;
-  // The preview size, one of the candidate sizes provided by the camera.
-  private IPoint mPreviewSize;
   private int mBackgroundColor;
   private int mOverlayGlassColor;
   private int mFrameStyle;
