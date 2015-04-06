@@ -338,7 +338,8 @@ public class MyCamera {
     }
 
     setState(State.Open);
-    camera.setDisplayOrientation(determineDisplayOrientation());
+    mPreviewRotation = determineDisplayOrientation();
+    camera.setDisplayOrientation(mPreviewRotation);
 
     // Set the camera, and give listener an opportunity to e.g. start preview
     setCamera(camera);
@@ -371,6 +372,10 @@ public class MyCamera {
     return mPreviewFormat;
   }
 
+  public int getPreviewRotation() {
+    return mPreviewRotation;
+  }
+
   private Camera mCamera;
   private int mCameraId;
   private Activity mActivity;
@@ -386,4 +391,7 @@ public class MyCamera {
   // These fields may be read and written from different threads:
   private IPoint mPreviewSize;
   private int mPreviewFormat;
+  // Rotation, in degrees, that must be applied to the preview image
+  // in order to display it correctly to the user
+  private int mPreviewRotation;
 }

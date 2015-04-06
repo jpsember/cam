@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.ImageFormat;
+import android.graphics.Matrix;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Camera.ShutterCallback;
@@ -51,7 +52,6 @@ public class MainActivity extends Activity {
 
     setContentView(buildContentView());
     mUIThreadHandler = new Handler(Looper.getMainLooper());
-
   }
 
   /**
@@ -81,10 +81,19 @@ public class MainActivity extends Activity {
         int rgba[] = new int[previewSize.x * previewSize.y * 2];
         decodeYUV420SP(rgba, data, previewSize.x, previewSize.y);
 
-        final Bitmap bitmap = Bitmap.createBitmap(rgba, previewSize.x, previewSize.y, Bitmap.Config.ARGB_8888);
+        Bitmap bitmap = Bitmap.createBitmap(rgba, previewSize.x, previewSize.y, Bitmap.Config.ARGB_8888);
+
+        int rotation = previewCamera.getPreviewRotation();
+        if (rotation != 0) {
+          Matrix matrix = new Matrix();
+          matrix.postRotate(rotation);
+          bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+        }
+
+        final Bitmap finalBitmap = bitmap;
         mUIThreadHandler.post(new Runnable() {
           public void run() {
-            mImageView.setImageBitmap(bitmap);
+            mImageView.setImageBitmap(finalBitmap);
           }
         });
       }
@@ -101,8 +110,11 @@ public class MainActivity extends Activity {
   private static void decodeYUV420SP(int[] argb, byte[] yuv420sp, int width, int height) {
     final int frameSize = width * height;
 
+    int uvpBase = frameSize;
     for (int j = 0, yp = 0; j < height; j++) {
-      int uvp = frameSize + (j >> 1) * width, u = 0, v = 0;
+      int u = 0;
+      int v = 0;
+      int uvp = uvpBase;
       for (int i = 0; i < width; i++, yp++) {
         int y = (0xff & ((int) yuv420sp[yp])) - 16;
         if (y < 0) y = 0;
@@ -125,6 +137,8 @@ public class MainActivity extends Activity {
 
         argb[yp] = 0xff000000 | ((r << 6) & 0xff0000) | ((g >> 2) & 0xff00) | ((b >> 10) & 0xff);
       }
+      if ((j & 1) != 0)
+        uvpBase += width;
     }
   }
 
@@ -168,7 +182,7 @@ public class MainActivity extends Activity {
     mPreview = new CameraPreview(this, mCamera);
     mPreview.setBackgroundColor(BGND_COLOR);
 
-    int style = 2;
+    int style = 0;
     if (style >= 2) {
       mPreview.setGlassColor(0xc0600000);
       mPreview.setFrameRadius(50);
