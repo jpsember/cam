@@ -145,7 +145,8 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
     if (viewSize.x == 0 || viewSize.y == 0)
       throw new IllegalStateException();
 
-    List<IPoint> sizes = mCamera.getPreviewSizes();
+    MyCamera.Properties properties = mCamera.getProperties();
+    List<IPoint> sizes = properties.previewSizes();
     trace("sizes: " + d(sizes));
     IPoint optimalSize = null;
 
@@ -155,6 +156,10 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
     for (int pass = 0; pass < 2; pass++) {
       int minError = Integer.MAX_VALUE / 10;
       for (IPoint size : sizes) {
+        // Exchange coordinates if rotating by +/- 90 degrees
+        if (properties.rotation() == 90 || properties.rotation() == 270)
+          size = new IPoint(size.y,size.x);
+
         int widthError = size.x - viewSize.x;
         int heightError = size.y - viewSize.y;
         if (pass == 0 && (widthError > 0 || heightError > 0))

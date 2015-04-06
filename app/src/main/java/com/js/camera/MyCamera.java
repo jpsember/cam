@@ -256,34 +256,13 @@ public class MyCamera {
     }
   }
 
-  /**
-   * Get list of preview sizes supported for camera, as IPoint objects
-   */
-  public List<IPoint> getPreviewSizes() {
-    assertOpen();
-    Camera.Parameters parameters = mCamera.getParameters();
-    List<Size> sizes = parameters.getSupportedPreviewSizes();
-    List<IPoint> output = new ArrayList<IPoint>();
-    for (Size size : sizes) {
-      output.add(new IPoint(size.width, size.height));
-    }
-    return output;
-  }
-
-  private Properties buildProperties() {
-    Properties p = mProperties;
-    if (p == null)
-      p = new Properties();
-    return p;
-  }
-
+  @Deprecated
   public void setPreviewSize(IPoint size) {
     assertOpen();
     Camera.Parameters parameters = mCamera.getParameters();
     parameters.setPreviewSize(size.x, size.y);
     setParameters(parameters);
-    Properties p = buildProperties();
-    p = mutable(p);
+    Properties p = mutable(mProperties);
     p.mSize = new IPoint(size);
     p.mFormat = parameters.getPreviewFormat();
     setProperties(p);
@@ -350,8 +329,9 @@ public class MyCamera {
 
     setState(State.Open);
 
-    Properties p = buildProperties();
+    Properties p = new Properties();
     p.mRotation = determineDisplayOrientation();
+    p.setPreviewSizes(camera.getParameters());
     setProperties(p);
 
     camera.setDisplayOrientation(p.mRotation);
@@ -409,6 +389,8 @@ public class MyCamera {
       p.mFormat = mFormat;
       p.mRotation = mRotation;
       p.mSize = mSize;
+      for (IPoint pt : mPreviewSizes)
+        p.mPreviewSizes.add(new IPoint(pt));
       return p;
     }
 
@@ -434,6 +416,21 @@ public class MyCamera {
       return mRotation;
     }
 
+    public List<IPoint> previewSizes() {
+      assertFrozen();
+      return mPreviewSizes;
+    }
+
+    void setPreviewSizes(Camera.Parameters parameters) {
+      mutate();
+      List<Size> sizes = parameters.getSupportedPreviewSizes();
+      mPreviewSizes.clear();
+      for (Size size : sizes) {
+        mPreviewSizes.add(new IPoint(size.width, size.height));
+      }
+    }
+
+    private List<IPoint> mPreviewSizes = new ArrayList();
     private IPoint mSize;
     private int mFormat;
     private int mRotation;
