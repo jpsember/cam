@@ -89,7 +89,7 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
       warning("layout, but camera is closed");
       return;
     }
-    mCamera.setPreviewSize(calculatePreviewSize());
+    mCamera.setPreviewSizeIndex(calculatePreviewSize());
     MyCamera.Properties properties = mCamera.getProperties();
     IPoint size = rotateSizeAccordingToProperties(properties, properties.previewSize());
 

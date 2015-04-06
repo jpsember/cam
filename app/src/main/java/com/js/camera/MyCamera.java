@@ -256,7 +256,7 @@ public class MyCamera {
     }
   }
 
-  public void setPreviewSize(int sizeIndex) {
+  public void setPreviewSizeIndex(int sizeIndex) {
     assertOpen();
     Properties m = mutable(mProperties);
     IPoint size = m.setPreviewSizeIndex(sizeIndex);
