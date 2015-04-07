@@ -1,6 +1,8 @@
 package com.js.camera;
 
 import android.app.Activity;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.hardware.Camera;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -34,6 +36,11 @@ public class MyCamera {
      * non-null if it's been opened)
      */
     void cameraChanged(Camera camera);
+
+    /**
+     * Called when a picture taken via takePicture() is available
+     */
+    void pictureTaken(Bitmap bitmap);
   }
 
   public MyCamera(Activity activity) {
@@ -205,6 +212,10 @@ public class MyCamera {
       mCamera.setPreviewCallback(mPreviewCallback);
   }
 
+  public void takePicture() {
+    camera().takePicture(null, null, mTakePictureJPEGCallback);
+  }
+
   private int determineDisplayOrientation(Camera.CameraInfo info) {
     int degrees = 0;
     switch (mDeviceRotation) {
@@ -230,6 +241,22 @@ public class MyCamera {
     result = myMod(result, 360);
     return result;
   }
+
+  private Camera.PictureCallback mTakePictureJPEGCallback = new Camera.PictureCallback() {
+    public void onPictureTaken(byte[] data, Camera camera) {
+      try {
+        final Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+        mUIThreadHandler.post(new Runnable() {
+          public void run() {
+            if (mListener != null)
+              mListener.pictureTaken(bitmap);
+          }
+        });
+      } catch (Throwable t) {
+        warning("PictureCallback caught: " + t + "\n" + stackTrace(t));
+      }
+    }
+  };
 
   public void setTrace(boolean state) {
     mTrace = state;

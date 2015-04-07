@@ -194,15 +194,13 @@ public class MainActivity extends Activity {
       @Override
       public void onClick(View arg0) {
         if (mCamera.isOpen()) {
-          if (true) {
+          if (false) {
             pr("  toggling preview");
             mCamera.setPreviewStarted(!mCamera.isPreviewStarted());
             return;
           } else {
-            pr("==== having camera take picture");
-            unimp("take picture");
-//            mCamera.camera().takePicture(shutterCallback, rawCallback, jpegCallback);
-            pr("==== done taking picture");
+            pr("  taking picture");
+            mCamera.takePicture();
           }
         }
       }

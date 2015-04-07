@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
@@ -116,6 +117,11 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
       }
       mCamera.startPreview();
     }
+  }
+
+  @Override
+  public void pictureTaken(Bitmap bitmap) {
+    unimp("Move listener to MainActivity");
   }
 
   // ------------- SurfaceHolder.Callback interface
