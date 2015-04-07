@@ -10,6 +10,7 @@ import android.view.Surface;
 import com.js.basic.Freezable;
 import com.js.basic.IPoint;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,6 +18,7 @@ import static com.js.basic.Tools.*;
 import static com.js.android.AndroidTools.*;
 
 import android.hardware.Camera.Size;
+import android.view.SurfaceHolder;
 
 /**
  * Encapsulates the camera object, and any additional data; also handles initializing it
@@ -176,14 +178,20 @@ public class MyCamera {
   }
 
   /**
-   * Get the underlying Camera object; must be open
-   *
-   * @deprecated
+   * Get the underlying Camera object; must be open, and only UI thread
    */
-  public Camera camera() {
+  private Camera camera() {
     assertUIThread();
     assertOpen();
     return mCamera;
+  }
+
+  public void setPreviewDisplay(SurfaceHolder holder) {
+    try {
+      camera().setPreviewDisplay(holder);
+    } catch (IOException e) {
+      die(e);
+    }
   }
 
   /**

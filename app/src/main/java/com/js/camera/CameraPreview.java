@@ -130,12 +130,7 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
     trace("surfaceChanged() " + mCamera + " surface size " + new IPoint(width, height));
     if (!mCamera.isOpen())
       return;
-
-    try {
-      mCamera.camera().setPreviewDisplay(holder);
-    } catch (IOException e) {
-      die(e);
-    }
+    mCamera.setPreviewDisplay(holder);
     mCamera.startPreview();
   }
 

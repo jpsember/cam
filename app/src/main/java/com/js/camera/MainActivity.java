@@ -199,10 +199,12 @@ public class MainActivity extends Activity {
             pr("  toggling preview");
             mCamera.setPreviewStarted(!mCamera.isPreviewStarted());
             return;
+          } else {
+            pr("==== having camera take picture");
+            unimp("take picture");
+//            mCamera.camera().takePicture(shutterCallback, rawCallback, jpegCallback);
+            pr("==== done taking picture");
           }
-          pr("==== having camera take picture");
-          mCamera.camera().takePicture(shutterCallback, rawCallback, jpegCallback);
-          pr("==== done taking picture");
         }
       }
     });
@@ -241,7 +243,7 @@ public class MainActivity extends Activity {
   PictureCallback jpegCallback = new PictureCallback() {
     public void onPictureTaken(byte[] data, Camera camera) {
       pr("...jpegCallback");
-      mCamera.camera().startPreview();
+      mCamera.startPreview();
 
       warning("skipping save picture");
       if (false) {
