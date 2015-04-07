@@ -1,10 +1,8 @@
 package com.js.camera;
 
-import java.io.IOException;
 import java.util.List;
 
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
@@ -25,17 +23,16 @@ import static com.js.basic.Tools.*;
 /**
  * Container view for the camera preview view, a SurfaceView
  */
-public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, MyCamera.Listener {
+public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
 
   public CameraPreview(Context context, MyCamera camera) {
     super(context);
-    setTrace(true);
+//    setTrace(true);
     setGlassColor(TRANSPARENT_COLOR);
     setFrameStyle(FRAMESTYLE_BEVEL);
     setFrameRadius(30);
 
     mCamera = camera;
-    camera.setListener(this);
 
     // Add a zero-height SurfaceView to avoid the flashing problem; see issue #7
     {
@@ -103,8 +100,6 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
     layoutOverlayViews(innerRect);
   }
 
-  // ------------- MyCamera.Listener interface
-  @Override
   public void cameraChanged(Camera camera) {
     trace("cameraChanged to " + nameOf(camera));
     if (camera != null) {
@@ -117,11 +112,6 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback, 
       }
       mCamera.startPreview();
     }
-  }
-
-  @Override
-  public void pictureTaken(Bitmap bitmap) {
-    unimp("Move listener to MainActivity");
   }
 
   // ------------- SurfaceHolder.Callback interface

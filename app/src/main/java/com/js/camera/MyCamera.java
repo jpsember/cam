@@ -45,7 +45,7 @@ public class MyCamera {
 
   public MyCamera(Activity activity) {
     mState = State.Start;
-    setTrace(true);
+//    setTrace(true);
     mDeviceRotation = activity.getWindowManager().getDefaultDisplay()
         .getRotation();
     doNothing();
@@ -242,19 +242,40 @@ public class MyCamera {
     return result;
   }
 
+  private int mTemp;
   private Camera.PictureCallback mTakePictureJPEGCallback = new Camera.PictureCallback() {
+
     public void onPictureTaken(byte[] data, Camera camera) {
+
+      mBitmapTaken = null;
       try {
-        final Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-        mUIThreadHandler.post(new Runnable() {
-          public void run() {
-            if (mListener != null)
-              mListener.pictureTaken(bitmap);
-          }
-        });
+        if ((mTemp++) % 4 == 0) {
+          throw new IllegalArgumentException("simulating error decoding bytes");
+        }
+        mBitmapTaken = BitmapFactory.decodeByteArray(data, 0, data.length);
       } catch (Throwable t) {
         warning("PictureCallback caught: " + t + "\n" + stackTrace(t));
       }
+
+      // Have UI thread continue the processing
+      mUIThreadHandler.post(new Runnable() {
+        public void run() {
+          Bitmap bitmap = mBitmapTaken;
+          mBitmapTaken = null;
+          // If camera is no longer open, do nothing else
+          if (!isOpen())
+            return;
+          try {
+            if (mListener != null && bitmap != null)
+              mListener.pictureTaken(bitmap);
+          } finally {
+            // The Camera class stopped the preview to take the picture; so
+            // restart it
+            mPreviewStarted = false;
+            startPreview();
+          }
+        }
+      });
     }
   };
 
@@ -328,7 +349,7 @@ public class MyCamera {
       camera = Camera.open(preferredCameraId);
       Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
       Camera.getCameraInfo(preferredCameraId, cameraInfo);
-      mDisplayOrientation = determineDisplayOrientation(cameraInfo);
+      mCorrectingRotation = determineDisplayOrientation(cameraInfo);
     } catch (RuntimeException e) {
       warning("Failed to open camera: " + d(e));
     }
@@ -361,7 +382,7 @@ public class MyCamera {
 
   private void constructProperties(Camera camera) {
     Properties p = new Properties();
-    p.mRotation = mDisplayOrientation;
+    p.mRotation = mCorrectingRotation;
     p.setPreviewSizes(camera.getParameters());
     p.mFormat = camera.getParameters().getPreviewFormat();
     setProperties(p);
@@ -393,7 +414,9 @@ public class MyCamera {
 
   private Camera mCamera;
   private int mCameraId;
-  private int mDisplayOrientation;
+  // Rotation to be applied to captured images to agree with device rotation
+  private int mCorrectingRotation;
+  // Rotation of device
   private int mDeviceRotation;
   private boolean mTrace;
   private State mState;
@@ -404,6 +427,8 @@ public class MyCamera {
   private Handler mUIThreadHandler;
   private Handler mBackgroundThreadHandler;
   private Properties mProperties;
+  // Bitmap received from taken picture
+  private Bitmap mBitmapTaken;
 
   /**
    * Object containing camera preview properties; immutable for thread safety.

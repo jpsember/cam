@@ -12,8 +12,6 @@ import android.graphics.Color;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.hardware.Camera;
-import android.hardware.Camera.PictureCallback;
-import android.hardware.Camera.ShutterCallback;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -68,12 +66,12 @@ public class MainActivity extends Activity {
         MyCamera.Properties properties = previewCamera.getProperties();
 
         IPoint previewSize = properties.previewSize();
-        if (mCounter++ <= 4)
-          timeStamp("onPreviewFrame, previewSize " + previewSize + " " + nameOf(Thread.currentThread()));
         if (previewSize == null)
           return;
 
         if (mCounter % 40 != 0)
+          return;
+        if (mUsingImageViewForTakenPhoto)
           return;
 
         if (properties.format() != ImageFormat.NV21)
@@ -164,10 +162,27 @@ public class MainActivity extends Activity {
 
   private void resumeCamera() {
     mCamera = new MyCamera(this);
-    installPreviewCallback();
+
     Toast.makeText(this, getString(R.string.take_photo_help), Toast.LENGTH_LONG).show();
     buildCameraView();
     mCameraViewContainer.addView(mPreview);
+    installPreviewCallback();
+
+    mCamera.setListener(
+        new MyCamera.Listener() {
+          @Override
+          public void cameraChanged(Camera camera) {
+            mPreview.cameraChanged(camera);
+          }
+
+          @Override
+          public void pictureTaken(Bitmap bitmap) {
+            mUsingImageViewForTakenPhoto = true;
+            mImageView.setImageBitmap(bitmap);
+          }
+        }
+    );
+
     mCamera.open();
   }
 
@@ -195,11 +210,8 @@ public class MainActivity extends Activity {
       public void onClick(View arg0) {
         if (mCamera.isOpen()) {
           if (false) {
-            pr("  toggling preview");
             mCamera.setPreviewStarted(!mCamera.isPreviewStarted());
-            return;
           } else {
-            pr("  taking picture");
             mCamera.takePicture();
           }
         }
@@ -224,30 +236,6 @@ public class MainActivity extends Activity {
     mediaScanIntent.setData(Uri.fromFile(file));
     sendBroadcast(mediaScanIntent);
   }
-
-  ShutterCallback shutterCallback = new ShutterCallback() {
-    public void onShutter() {
-      pr("...onShutter callback");
-    }
-  };
-
-  PictureCallback rawCallback = new PictureCallback() {
-    public void onPictureTaken(byte[] data, Camera camera) {
-      pr("...PictureCallback");
-    }
-  };
-
-  PictureCallback jpegCallback = new PictureCallback() {
-    public void onPictureTaken(byte[] data, Camera camera) {
-      pr("...jpegCallback");
-      mCamera.startPreview();
-
-      warning("skipping save picture");
-      if (false) {
-        new SaveImageTask().execute(data);
-      }
-    }
-  };
 
   private class SaveImageTask extends AsyncTask<byte[], Void, Void> {
 
@@ -294,4 +282,5 @@ public class MainActivity extends Activity {
   private FrameLayout mCameraViewContainer;
   private ImageView mImageView;
   private Handler mUIThreadHandler;
+  private boolean mUsingImageViewForTakenPhoto;
 }
