@@ -8,6 +8,7 @@ import java.io.IOException;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
@@ -42,7 +43,6 @@ public class MainActivity extends Activity {
     startApp(this);
     AppPreferences.prepare(this);
     doNothingAndroid();
-    timeStamp("MainActivity created, thread:" + nameOf(Thread.currentThread()));
 
     super.onCreate(savedInstanceState);
     requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -176,9 +176,11 @@ public class MainActivity extends Activity {
           }
 
           @Override
-          public void pictureTaken(Bitmap bitmap) {
+          public void pictureTaken(byte[] jpeg, int rotationToApply) {
             mUsingImageViewForTakenPhoto = true;
+            Bitmap bitmap = constructBitmapFromJPEG(jpeg, rotationToApply);
             mImageView.setImageBitmap(bitmap);
+            pr("took picture " + bitmap.getWidth() + " x " + bitmap.getHeight());
           }
         }
     );
@@ -275,6 +277,16 @@ public class MainActivity extends Activity {
     mImageView.setLayoutParams(new LinearLayout.LayoutParams(240, LinearLayout.LayoutParams.MATCH_PARENT));
     mImageView.setImageResource(R.drawable.ic_launcher);
     return mImageView;
+  }
+
+  private Bitmap constructBitmapFromJPEG(byte[] jpeg, int rotationToApply) {
+    Bitmap bitmap = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.length);
+    if (rotationToApply != 0) {
+      Matrix matrix = new Matrix();
+      matrix.postRotate(rotationToApply);
+      bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+    }
+    return bitmap;
   }
 
   private MyCamera mCamera;

@@ -40,7 +40,7 @@ public class MyCamera {
     /**
      * Called when a picture taken via takePicture() is available
      */
-    void pictureTaken(Bitmap bitmap);
+    void pictureTaken(byte[] jpeg, int rotationToApply);
   }
 
   public MyCamera(Activity activity) {
@@ -242,32 +242,14 @@ public class MyCamera {
     return result;
   }
 
-  private int mTemp;
   private Camera.PictureCallback mTakePictureJPEGCallback = new Camera.PictureCallback() {
 
-    public void onPictureTaken(byte[] data, Camera camera) {
-
-      mBitmapTaken = null;
-      try {
-        if ((mTemp++) % 4 == 0) {
-          throw new IllegalArgumentException("simulating error decoding bytes");
-        }
-        mBitmapTaken = BitmapFactory.decodeByteArray(data, 0, data.length);
-      } catch (Throwable t) {
-        warning("PictureCallback caught: " + t + "\n" + stackTrace(t));
-      }
-
-      // Have UI thread continue the processing
+    public void onPictureTaken(final byte[] data, Camera camera) {
       mUIThreadHandler.post(new Runnable() {
         public void run() {
-          Bitmap bitmap = mBitmapTaken;
-          mBitmapTaken = null;
-          // If camera is no longer open, do nothing else
-          if (!isOpen())
-            return;
           try {
-            if (mListener != null && bitmap != null)
-              mListener.pictureTaken(bitmap);
+            if (mListener != null && data != null)
+              mListener.pictureTaken(data, mCorrectingRotation);
           } finally {
             // The Camera class stopped the preview to take the picture; so
             // restart it
