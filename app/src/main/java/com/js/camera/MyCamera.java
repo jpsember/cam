@@ -34,9 +34,13 @@ public class MyCamera {
     void cameraChanged(Camera camera);
   }
 
-  public MyCamera() {
+  public MyCamera(Activity activity) {
     mState = State.Start;
     setTrace(true);
+    mDeviceRotation = activity.getWindowManager().getDefaultDisplay()
+        .getRotation();
+    doNothing();
+    doNothingAndroid();
   }
 
   public void setListener(Listener listener) {
@@ -47,11 +51,6 @@ public class MyCamera {
     Start, Opening, Open, Closed, Failed
   }
 
-  public void setActivity(Activity activity) {
-    mActivity = activity;
-    doNothing();
-    doNothingAndroid();
-  }
 
   private void openBackgroundHandler() {
     mUIThreadHandler = new Handler(Looper.getMainLooper());
@@ -171,12 +170,6 @@ public class MyCamera {
     setCamera(null);
   }
 
-  public Activity activity() {
-    if (mActivity == null)
-      throw new IllegalStateException("No activity specified");
-    return mActivity;
-  }
-
   public void assertOpen() {
     if (!isOpen())
       throw new IllegalStateException("Camera not open");
@@ -204,15 +197,9 @@ public class MyCamera {
       mCamera.setPreviewCallback(mPreviewCallback);
   }
 
-  private int determineDisplayOrientation() {
-    trace("determineCameraDisplayOrientation()");
-    Camera.CameraInfo info =
-        new Camera.CameraInfo();
-    Camera.getCameraInfo(mCameraId, info);
-    int rotation = activity().getWindowManager().getDefaultDisplay()
-        .getRotation();
+  private int determineDisplayOrientation(Camera.CameraInfo info) {
     int degrees = 0;
-    switch (rotation) {
+    switch (mDeviceRotation) {
       case Surface.ROTATION_0:
         degrees = 0;
         break;
@@ -304,6 +291,9 @@ public class MyCamera {
     Camera camera = null;
     try {
       camera = Camera.open(preferredCameraId);
+      Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
+      Camera.getCameraInfo(preferredCameraId, cameraInfo);
+      mDisplayOrientation = determineDisplayOrientation(cameraInfo);
     } catch (RuntimeException e) {
       warning("Failed to open camera: " + d(e));
     }
@@ -336,7 +326,7 @@ public class MyCamera {
 
   private void constructProperties(Camera camera) {
     Properties p = new Properties();
-    p.mRotation = determineDisplayOrientation();
+    p.mRotation = mDisplayOrientation;
     p.setPreviewSizes(camera.getParameters());
     p.mFormat = camera.getParameters().getPreviewFormat();
     setProperties(p);
@@ -368,7 +358,8 @@ public class MyCamera {
 
   private Camera mCamera;
   private int mCameraId;
-  private Activity mActivity;
+  private int mDisplayOrientation;
+  private int mDeviceRotation;
   private boolean mTrace;
   private State mState;
   private String mFailureMessage;
@@ -440,7 +431,7 @@ public class MyCamera {
       return mPreviewSizes.get(sizeIndex);
     }
 
-    private List<IPoint> mPreviewSizes = new ArrayList();
+    private List<IPoint> mPreviewSizes = new ArrayList<IPoint>();
     private int mPreviewSizeIndex = -1;
     private int mFormat;
     private int mRotation;

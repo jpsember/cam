@@ -164,8 +164,7 @@ public class MainActivity extends Activity {
   }
 
   private void resumeCamera() {
-    mCamera = new MyCamera();
-    mCamera.setActivity(this);
+    mCamera = new MyCamera(this);
     installPreviewCallback();
     Toast.makeText(this, getString(R.string.take_photo_help), Toast.LENGTH_LONG).show();
     buildCameraView();
