@@ -6,7 +6,14 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 
+import com.js.basic.Files;
+import com.js.basic.JSONTools;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.File;
+import java.io.IOException;
 
 import static com.js.android.AndroidTools.*;
 import static com.js.basic.Tools.*;
@@ -34,7 +41,7 @@ public class PhotoFile {
   }
 
   public enum State {
-    Start, Opening, Open, Closed, Failed
+    Start, Opening, Open, Closing, Closed, Failed
   }
 
   public State state() {
@@ -68,7 +75,13 @@ public class PhotoFile {
     trace("close()");
     if (!isOpen())
       return;
-    setState(State.Closed);
+
+    setState(State.Closing);
+    mBackgroundThreadHandler.post(new Runnable() {
+      public void run() {
+        backgroundThreadCloseFile();
+      }
+    });
   }
 
   public void assertOpen() {
@@ -132,18 +145,53 @@ public class PhotoFile {
 
     mUIThreadHandler.post(new Runnable() {
       public void run() {
+        setState(State.Open);
         mListener.stateChanged();
       }
     });
   }
 
+  private void backgroundThreadCloseFile() {
+
+    trace("backgroundThreadCloseFile");
+
+    try {
+      flush();
+    } catch (IOException e) {
+      warning("failed flushing file during close:\n" + e);
+    }
+
+    mUIThreadHandler.post(new Runnable() {
+      public void run() {
+        setState(State.Closed);
+      }
+    });
+  }
+
+
   private boolean prepareRootDirectory() {
     mRootDirectory = new File(mContext.getExternalFilesDir(null), "Photos");
-    if (!mRootDirectory.exists())
+    if (!mRootDirectory.exists()) {
       mRootDirectory.mkdir();
-    if (!mRootDirectory.exists())
-      return false;
+      if (!mRootDirectory.exists())
+        return false;
+      mModified = true;
+      try {
+        flush();
+      } catch (IOException e) {
+        warning("Problem writing file state: " + d(e));
+        return false;
+      }
+    } else {
+      try {
+        readFileState();
+      } catch (IOException e) {
+        warning("Problem reading file state: " + d(e));
+        return false;
+      }
+    }
     trace("Opened root directory " + mRootDirectory);
+
     return true;
   }
 
@@ -175,6 +223,45 @@ public class PhotoFile {
     return false;
   }
 
+  private void flush() throws IOException {
+    if (!mModified)
+      return;
+    writeFileState();
+    mModified = false;
+  }
+
+  private void writeFileState() throws IOException {
+    JSONObject map = new JSONObject();
+    String jsonString = null;
+    try {
+      map.put("nextid", mNextPhotoId);
+      jsonString = map.toString(4);
+    } catch (JSONException e) {
+      die(e);
+    }
+    trace("Writing file state:\n" + jsonString);
+    Files.writeString(getStateFile(), jsonString);
+  }
+
+  private File getStateFile() {
+    return new File(mRootDirectory, "state");
+  }
+
+  private void readFileState() throws IOException {
+    File stateFile = getStateFile();
+    if (!stateFile.exists())
+      return;
+    String jsonString = Files.readString(stateFile);
+    trace("Reading file state from: " + jsonString);
+    try {
+      JSONObject map = JSONTools.parseMap(jsonString);
+      mNextPhotoId = map.getInt("nextid");
+    } catch (JSONException e) {
+      die(e);
+    }
+  }
+
+
   private boolean mTrace;
   private State mState;
   private String mFailureMessage;
@@ -183,4 +270,9 @@ public class PhotoFile {
   private final Listener mListener;
   private Handler mUIThreadHandler;
   private Handler mBackgroundThreadHandler;
+
+  // These fields should only be accessed by the background thread
+
+  private boolean mModified;
+  private int mNextPhotoId;
 }
