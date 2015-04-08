@@ -1,5 +1,8 @@
 package com.js.camera;
 
+import android.graphics.Bitmap;
+import android.graphics.Matrix;
+
 import com.js.basic.IPoint;
 
 public class BitmapTools {
@@ -51,6 +54,21 @@ public class BitmapTools {
         uvpBase += width;
     }
     return argb;
+  }
+
+  /**
+   * Rotate a bitmap
+   *
+   * @param rotationToApply rotation, in degrees
+   * @return rotated bitmap, or original if no rotation was necessary
+   */
+  public static Bitmap rotateBitmap(Bitmap bitmap, int rotationToApply) {
+    if (rotationToApply != 0) {
+      Matrix matrix = new Matrix();
+      matrix.postRotate(rotationToApply);
+      bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+    }
+    return bitmap;
   }
 
 }

@@ -239,11 +239,7 @@ public class MainActivity extends Activity {
 
   private Bitmap constructBitmapFromJPEG(byte[] jpeg, int rotationToApply) {
     Bitmap bitmap = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.length);
-    if (rotationToApply != 0) {
-      Matrix matrix = new Matrix();
-      matrix.postRotate(rotationToApply);
-      bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-    }
+    bitmap = BitmapTools.rotateBitmap(bitmap, rotationToApply);
     return bitmap;
   }
 
