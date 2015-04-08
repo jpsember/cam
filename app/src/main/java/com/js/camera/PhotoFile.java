@@ -19,8 +19,11 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import static com.js.android.AndroidTools.*;
 import static com.js.basic.Tools.*;
@@ -125,6 +128,20 @@ public class PhotoFile {
         }
       }
     });
+  }
+
+  public List<PhotoInfo> getPhotos(int startId, int maxCount) {
+    ArrayList<PhotoInfo> list = new ArrayList();
+    PhotoInfo sentinel = PhotoInfo.buildSentinel(startId);
+    synchronized (mPhotoSet) {
+      SortedSet<PhotoInfo> view = mPhotoSet.tailSet(sentinel);
+      for (PhotoInfo info : view) {
+        if (list.size() >= maxCount)
+          break;
+        list.add(info);
+      }
+    }
+    return list;
   }
 
   private static boolean isUIThread() {
@@ -348,7 +365,9 @@ public class PhotoFile {
     Files.writeString(path, content);
     trace("writing " + info + " to " + path + ", content=<" + content + ">");
 
-    mPhotoMap.put(info.getId(), info);
+    synchronized (mPhotoSet) {
+      mPhotoSet.add(info);
+    }
 
     // Flush the changes, i.e. the unique id
     flush();
@@ -376,7 +395,15 @@ public class PhotoFile {
   }
 
   private void readPhotoRecords() {
-    mPhotoMap = new HashMap();
+    SortedSet<PhotoInfo> photoSet = new TreeSet(new Comparator() {
+      @Override
+      public int compare(Object lhs, Object rhs) {
+        PhotoInfo i1 = (PhotoInfo) lhs;
+        PhotoInfo i2 = (PhotoInfo) rhs;
+        return i1.getId() - i2.getId();
+      }
+    });
+
     File[] fList = mRootDirectory.listFiles();
     for (File file : fList) {
       if (file.isFile()) {
@@ -400,10 +427,11 @@ public class PhotoFile {
           warning("Failed to read or parse " + file);
           continue;
         }
-        mPhotoMap.put(photoInfo.getId(), photoInfo);
+        photoSet.add(photoInfo);
         trace("read " + photoInfo);
       }
     }
+    mPhotoSet = photoSet;
   }
 
   private boolean mTrace;
@@ -419,5 +447,5 @@ public class PhotoFile {
 
   private boolean mModified;
   private int mNextPhotoId;
-  private Map<Integer, PhotoInfo> mPhotoMap;
+  private SortedSet<PhotoInfo> mPhotoSet;
 }

@@ -31,6 +31,15 @@ public class PhotoInfo extends Freezable.Mutable {
   }
 
   /**
+   * Build a PhotoInfo object that has only its id defined, suitable for a Comparator argument
+   */
+  public static PhotoInfo buildSentinel(int id) {
+    PhotoInfo sentinel = new PhotoInfo();
+    sentinel.mId = id;
+    return sentinel;
+  }
+
+  /**
    * Set the time this photo was created
    */
   public void setCreationTime(int secondsSinceEpoch) {

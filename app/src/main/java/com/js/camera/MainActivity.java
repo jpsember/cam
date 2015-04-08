@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.List;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -128,6 +129,7 @@ public class MainActivity extends Activity {
       @Override
       public void photoCreated(PhotoInfo photoInfo) {
         pr("Created " + photoInfo);
+        mLastCreatedInfo = photoInfo;
       }
     });
     mPhotoFile.open();
@@ -192,6 +194,25 @@ public class MainActivity extends Activity {
       @Override
       public void onClick(View arg0) {
         if (mCamera.isOpen()) {
+          PhotoInfo res = null;
+          List<PhotoInfo> photos = mPhotoFile.getPhotos(0, 100);
+          if (photos.size() < 10)
+            photos.clear();
+          int bestDiff = Integer.MAX_VALUE;
+          for (PhotoInfo p : photos) {
+            int diff = p.getId() - mPreviousPhotoId;
+            if (diff > 0 && diff < bestDiff) {
+              bestDiff = diff;
+              res = p;
+            }
+          }
+          if (res == null && !photos.isEmpty())
+            res = photos.get(0);
+          if (res != null) {
+            pr("to do: display " + res);
+            mPreviousPhotoId = res.getId();
+            return;
+          }
           if (false) {
             mCamera.setPreviewStarted(!mCamera.isPreviewStarted());
           } else {
@@ -201,6 +222,8 @@ public class MainActivity extends Activity {
       }
     });
   }
+
+  private int mPreviousPhotoId = -1;
 
   @Override
   protected void onResume() {
@@ -275,4 +298,5 @@ public class MainActivity extends Activity {
   private Handler mUIThreadHandler;
   private boolean mUsingImageViewForTakenPhoto;
   private PhotoFile mPhotoFile;
+  private PhotoInfo mLastCreatedInfo;
 }
