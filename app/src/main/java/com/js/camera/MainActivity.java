@@ -118,6 +118,16 @@ public class MainActivity extends Activity {
     return container;
   }
 
+  private void resumePhotoFile() {
+    mPhotoFile = new PhotoFile(new PhotoFile.Listener() {
+      @Override
+      public void stateChanged() {
+        pr("PhotoFile state changed to " + mPhotoFile.state());
+      }
+    });
+    mPhotoFile.open();
+  }
+
   private void resumeCamera() {
     mCamera = new MyCamera(this);
 
@@ -150,6 +160,11 @@ public class MainActivity extends Activity {
     mCamera.close();
     mCamera = null;
     mCameraViewContainer.removeView(mPreview);
+  }
+
+  private void pausePhotoFile() {
+    mPhotoFile.close();
+    mPhotoFile = null;
   }
 
   private void buildCameraView() {
@@ -185,10 +200,12 @@ public class MainActivity extends Activity {
   protected void onResume() {
     super.onResume();
     resumeCamera();
+    resumePhotoFile();
   }
 
   @Override
   protected void onPause() {
+    pausePhotoFile();
     pauseCamera();
     super.onPause();
   }
@@ -251,4 +268,5 @@ public class MainActivity extends Activity {
   private ImageView mImageView;
   private Handler mUIThreadHandler;
   private boolean mUsingImageViewForTakenPhoto;
+  private PhotoFile mPhotoFile;
 }

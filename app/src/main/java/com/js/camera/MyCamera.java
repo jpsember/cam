@@ -60,7 +60,6 @@ public class MyCamera {
     Start, Opening, Open, Closed, Failed
   }
 
-
   private void openBackgroundHandler() {
     mUIThreadHandler = new Handler(Looper.getMainLooper());
     HandlerThread backgroundThreadHandler = new HandlerThread("MyCamera background thread");
