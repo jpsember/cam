@@ -1,14 +1,24 @@
 package com.js.camera;
 
+import com.js.basic.IPoint;
+
 public class BitmapTools {
 
   /**
    * Decode YUV 4:2:0 bitmap to ARGB_8888 format.
    * Note that a (fully opaque) alpha channel is added;
    * if we omit this, I can't then see how to create a Bitmap from the result
+   *
+   * @param argb where to store data; if null, creates it
+   * @return argb data
    */
-  public static void decodeYUV420SP(int[] argb, byte[] yuv420sp, int width, int height) {
-    final int frameSize = width * height;
+  public static int[] decodeYUV420SP(int[] argb, byte[] yuv420sp, IPoint size) {
+
+    int width = size.x;
+    int height = size.y;
+    int frameSize = width * height;
+    if (argb == null)
+      argb = new int[frameSize * 2];
 
     int uvpBase = frameSize;
     for (int j = 0, yp = 0; j < height; j++) {
@@ -40,6 +50,7 @@ public class BitmapTools {
       if ((j & 1) != 0)
         uvpBase += width;
     }
+    return argb;
   }
 
 }

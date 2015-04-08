@@ -77,10 +77,8 @@ public class MainActivity extends Activity {
         if (properties.format() != ImageFormat.NV21)
           throw new UnsupportedOperationException("Unsupported preview image format: " + properties.format());
 
-        int rgba[] = new int[previewSize.x * previewSize.y * 2];
-        BitmapTools.decodeYUV420SP(rgba, data, previewSize.x, previewSize.y);
-
-        Bitmap bitmap = Bitmap.createBitmap(rgba, previewSize.x, previewSize.y, Bitmap.Config.ARGB_8888);
+        int argb[] = BitmapTools.decodeYUV420SP(null, data, previewSize);
+        Bitmap bitmap = Bitmap.createBitmap(argb, previewSize.x, previewSize.y, Bitmap.Config.ARGB_8888);
 
         int rotation = properties.rotation();
         if (rotation != 0) {
@@ -100,6 +98,7 @@ public class MainActivity extends Activity {
       private int mCounter;
     });
   }
+
   private final static int BGND_COLOR = Color.DKGRAY;
 
   private View buildContentView() {
