@@ -2,6 +2,9 @@ package com.js.camera;
 
 import com.js.basic.Freezable;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import static com.js.basic.Tools.*;
 
 /**
@@ -65,7 +68,38 @@ public class PhotoInfo extends Freezable.Mutable {
     return s;
   }
 
+  public String toJSON() {
+    assertFrozen();
+    if (mJSON == null) {
+      synchronized (this) {
+        if (mJSON == null) {
+          try {
+            JSONObject map = new JSONObject();
+            map.put("id", getId());
+            map.put("created", getCreationTime());
+            map.put("state", getAgeState());
+            mJSON = map.toString();
+          } catch (JSONException e) {
+            die(e);
+          }
+        }
+      }
+    }
+    return mJSON;
+  }
+
+  public static PhotoInfo parseJSON(String jsonString) throws JSONException {
+    JSONObject map = new JSONObject(jsonString);
+    PhotoInfo p = new PhotoInfo();
+    p.setId(map.getInt("id"));
+    p.setCreationTime(map.getInt("created"));
+    p.setAgeState(map.getInt("state"));
+    p.freeze();
+    return p;
+  }
+
   private int mCreationTime;
   private int mAgeState;
   private int mId;
+  private volatile String mJSON;
 }

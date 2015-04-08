@@ -11,6 +11,7 @@ import android.os.Looper;
 import com.js.basic.Files;
 import com.js.basic.JSONTools;
 
+import org.apache.commons.io.FilenameUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -18,6 +19,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.HashMap;
+import java.util.Map;
 
 import static com.js.android.AndroidTools.*;
 import static com.js.basic.Tools.*;
@@ -242,6 +245,7 @@ public class PhotoFile {
       } else {
         readFileState();
       }
+      readPhotoRecords();
     } catch (IOException e) {
       bgndFail("preparing root", e);
       return false;
@@ -320,12 +324,7 @@ public class PhotoFile {
     assertBgndThread();
     Bitmap bitmap = BitmapFactory.decodeByteArray(jpegData, 0, jpegData.length);
     bitmap = BitmapTools.rotateBitmap(bitmap, rotationToApply);
-
-    int photoId = getUniquePhotoId();
-    PhotoInfo info = PhotoInfo.create();
-    info.setId(photoId);
-    info.freeze();
-    flush();
+    PhotoInfo info = createPhotoInfo();
 
     // Scale photo to size appropriate to starting state
     unimp("scale photo to starting state");
@@ -336,6 +335,26 @@ public class PhotoFile {
     bitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream);
 
     return info;
+  }
+
+  private PhotoInfo createPhotoInfo() throws IOException {
+    PhotoInfo info = PhotoInfo.create();
+    info.setId(getUniquePhotoId());
+    info.freeze();
+
+    // Write photo info to file, and store in map
+    File path = getPhotoInfoPath(info.getId());
+    String content = info.toJSON();
+    Files.writeString(path, content);
+    trace("writing " + info + " to " + path + ", content=<" + content + ">");
+
+    mPhotoMap.put(info.getId(), info);
+
+    // Flush the changes, i.e. the unique id
+    flush();
+    return info;
+
+    // TODO: we don't need to store the unique id, since we'll be reading all records into mem
   }
 
   private int getUniquePhotoId() {
@@ -351,6 +370,42 @@ public class PhotoFile {
     return new File(mRootDirectory, "" + photoId + ".jpg");
   }
 
+  private File getPhotoInfoPath(int photoId) {
+    assertBgndThread();
+    return new File(mRootDirectory, "" + photoId + ".json");
+  }
+
+  private void readPhotoRecords() {
+    mPhotoMap = new HashMap();
+    File[] fList = mRootDirectory.listFiles();
+    for (File file : fList) {
+      if (file.isFile()) {
+        String fileStr = file.getName();
+        String extension = FilenameUtils.getExtension(fileStr);
+        if (!extension.equals("jpg"))
+          continue;
+        String baseName = FilenameUtils.getBaseName(fileStr);
+        int id;
+        try {
+          id = Integer.parseInt(baseName);
+        } catch (NumberFormatException e) {
+          continue;
+        }
+        PhotoInfo photoInfo;
+        try {
+          File photoInfoPath = getPhotoInfoPath(id);
+          String jsonString = Files.readString(photoInfoPath);
+          photoInfo = PhotoInfo.parseJSON(jsonString);
+        } catch (Throwable t) {
+          warning("Failed to read or parse " + file);
+          continue;
+        }
+        mPhotoMap.put(photoInfo.getId(), photoInfo);
+        trace("read " + photoInfo);
+      }
+    }
+  }
+
   private boolean mTrace;
   private State mState;
   private String mFailureMessage;
@@ -364,4 +419,5 @@ public class PhotoFile {
 
   private boolean mModified;
   private int mNextPhotoId;
+  private Map<Integer, PhotoInfo> mPhotoMap;
 }
