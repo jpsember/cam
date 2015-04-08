@@ -1,6 +1,8 @@
 package com.js.camera;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -13,7 +15,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 
 import static com.js.android.AndroidTools.*;
 import static com.js.basic.Tools.*;
@@ -24,9 +28,12 @@ import static com.js.basic.Tools.*;
 public class PhotoFile {
 
   private static final boolean SIMULATED_DELAYS = false;
+  private static final boolean WITH_ASSERTIONS = true;
 
   public interface Listener {
     void stateChanged();
+
+    void photoCreated(PhotoInfo photoInfo);
   }
 
   public PhotoFile(Context context, Listener listener) {
@@ -99,6 +106,24 @@ public class PhotoFile {
     return mFailureMessage;
   }
 
+  public void createPhoto(final byte[] jpegData, final int rotationToApply) {
+    assertOpen();
+    mBackgroundThreadHandler.post(new Runnable() {
+      public void run() {
+        try {
+          final PhotoInfo photoInfo = backgroundThreadCreatePhoto(jpegData, rotationToApply);
+          mUIThreadHandler.post(new Runnable() {
+            public void run() {
+              mListener.photoCreated(photoInfo);
+            }
+          });
+        } catch (IOException e) {
+          bgndFail("create photo", e);
+        }
+      }
+    });
+  }
+
   private static boolean isUIThread() {
     return Thread.currentThread() == Looper.getMainLooper().getThread();
   }
@@ -119,10 +144,45 @@ public class PhotoFile {
     setState(State.Failed);
     mFailureMessage = message;
     trace("Failed with message " + message);
+    mListener.stateChanged();
+  }
+
+  private void assertUIThread() {
+    if (!WITH_ASSERTIONS)
+      return;
+    if (isUIThread())
+      return;
+    throw new IllegalStateException("Attempt to call from non-UI thread " + nameOf(Thread.currentThread()));
+  }
+
+  private void setState(State state) {
+    assertUIThread();
+    if (mState != state) {
+      trace("Changing state from " + mState + " to " + state);
+      mState = state;
+    }
+  }
+
+  private void openBackgroundHandler() {
+    mUIThreadHandler = new Handler(Looper.getMainLooper());
+    HandlerThread backgroundThreadHandler = new HandlerThread("PhotoFile background thread");
+    backgroundThreadHandler.start();
+    mBackgroundThreadHandler = new Handler(backgroundThreadHandler.getLooper());
+  }
+
+  // --------------- Methods called only within background thread
+  // --------------- (consider putting these in their own class for simplicity?  Or add prefix?)
+
+  private void assertBgndThread() {
+    if (!WITH_ASSERTIONS)
+      return;
+    if (!isUIThread())
+      return;
+    throw new IllegalStateException("Attempt to call from non-bgnd thread " + nameOf(Thread.currentThread()));
   }
 
   private void backgroundThreadOpenFile() {
-
+    assertBgndThread();
     trace("backgroundThreadOpenFile");
 
     if (SIMULATED_DELAYS)
@@ -135,7 +195,6 @@ public class PhotoFile {
         break;
       }
       if (!prepareRootDirectory()) {
-        setFailed("Failed to prepare root directory");
         break;
       }
     } while (false);
@@ -152,13 +211,14 @@ public class PhotoFile {
   }
 
   private void backgroundThreadCloseFile() {
+    assertBgndThread();
 
     trace("backgroundThreadCloseFile");
 
     try {
       flush();
     } catch (IOException e) {
-      warning("failed flushing file during close:\n" + e);
+      bgndFail("closing file", e);
     }
 
     mUIThreadHandler.post(new Runnable() {
@@ -168,54 +228,31 @@ public class PhotoFile {
     });
   }
 
-
   private boolean prepareRootDirectory() {
+    assertBgndThread();
     mRootDirectory = new File(mContext.getExternalFilesDir(null), "Photos");
-    if (!mRootDirectory.exists()) {
-      mRootDirectory.mkdir();
-      if (!mRootDirectory.exists())
-        return false;
-      mModified = true;
-      try {
+
+    try {
+      if (!mRootDirectory.exists()) {
+        mRootDirectory.mkdir();
+        if (!mRootDirectory.exists())
+          return false;
+        mModified = true;
         flush();
-      } catch (IOException e) {
-        warning("Problem writing file state: " + d(e));
-        return false;
-      }
-    } else {
-      try {
+      } else {
         readFileState();
-      } catch (IOException e) {
-        warning("Problem reading file state: " + d(e));
-        return false;
       }
+    } catch (IOException e) {
+      bgndFail("preparing root", e);
+      return false;
     }
     trace("Opened root directory " + mRootDirectory);
 
     return true;
   }
 
-  private void assertUIThread() {
-    if (isUIThread())
-      return;
-    throw new IllegalStateException("Attempt to call from non-UI thread " + nameOf(Thread.currentThread()));
-  }
-
-  private void setState(State state) {
-    if (mState != state) {
-      trace("Changing state from " + mState + " to " + state);
-      mState = state;
-    }
-  }
-
-  private void openBackgroundHandler() {
-    mUIThreadHandler = new Handler(Looper.getMainLooper());
-    HandlerThread backgroundThreadHandler = new HandlerThread("PhotoFile background thread");
-    backgroundThreadHandler.start();
-    mBackgroundThreadHandler = new Handler(backgroundThreadHandler.getLooper());
-  }
-
   private boolean isExternalStorageWritable() {
+    assertBgndThread();
     String state = Environment.getExternalStorageState();
     if (Environment.MEDIA_MOUNTED.equals(state)) {
       return true;
@@ -224,6 +261,7 @@ public class PhotoFile {
   }
 
   private void flush() throws IOException {
+    assertBgndThread();
     if (!mModified)
       return;
     writeFileState();
@@ -231,23 +269,26 @@ public class PhotoFile {
   }
 
   private void writeFileState() throws IOException {
+    assertBgndThread();
     JSONObject map = new JSONObject();
-    String jsonString = null;
+    String jsonString;
     try {
       map.put("nextid", mNextPhotoId);
       jsonString = map.toString(4);
     } catch (JSONException e) {
-      die(e);
+      throw new IOException(e);
     }
     trace("Writing file state:\n" + jsonString);
     Files.writeString(getStateFile(), jsonString);
   }
 
   private File getStateFile() {
+    assertBgndThread();
     return new File(mRootDirectory, "state");
   }
 
   private void readFileState() throws IOException {
+    assertBgndThread();
     File stateFile = getStateFile();
     if (!stateFile.exists())
       return;
@@ -257,10 +298,58 @@ public class PhotoFile {
       JSONObject map = JSONTools.parseMap(jsonString);
       mNextPhotoId = map.getInt("nextid");
     } catch (JSONException e) {
-      die(e);
+      throw new IOException(e);
     }
   }
 
+  private void bgndFail(Object message, Throwable t) {
+    assertBgndThread();
+    String failMessage = message.toString();
+    if (t != null)
+      failMessage += "; " + d(t);
+    final String finalMessage = failMessage;
+
+    mUIThreadHandler.post(new Runnable() {
+      public void run() {
+        setFailed(finalMessage);
+      }
+    });
+  }
+
+  private PhotoInfo backgroundThreadCreatePhoto(byte[] jpegData, int rotationToApply) throws IOException {
+    assertBgndThread();
+    Bitmap bitmap = BitmapFactory.decodeByteArray(jpegData, 0, jpegData.length);
+    bitmap = BitmapTools.rotateBitmap(bitmap, rotationToApply);
+
+    int photoId = getUniquePhotoId();
+    PhotoInfo info = PhotoInfo.create();
+    info.setId(photoId);
+    info.freeze();
+    flush();
+
+    // Scale photo to size appropriate to starting state
+    unimp("scale photo to starting state");
+
+    File photoPath = getPhotoPath(info.getId());
+    trace("Writing " + info + " to " + photoPath);
+    OutputStream stream = new FileOutputStream(photoPath);
+    bitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream);
+
+    return info;
+  }
+
+  private int getUniquePhotoId() {
+    assertBgndThread();
+    int id = mNextPhotoId;
+    mNextPhotoId++;
+    mModified = true;
+    return id;
+  }
+
+  private File getPhotoPath(int photoId) {
+    assertBgndThread();
+    return new File(mRootDirectory, "" + photoId + ".jpg");
+  }
 
   private boolean mTrace;
   private State mState;

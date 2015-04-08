@@ -124,6 +124,11 @@ public class MainActivity extends Activity {
       public void stateChanged() {
         pr("PhotoFile state changed to " + mPhotoFile.state());
       }
+
+      @Override
+      public void photoCreated(PhotoInfo photoInfo) {
+        pr("Created " + photoInfo);
+      }
     });
     mPhotoFile.open();
   }
@@ -145,6 +150,9 @@ public class MainActivity extends Activity {
 
           @Override
           public void pictureTaken(byte[] jpeg, int rotationToApply) {
+            if (true) {
+              mPhotoFile.createPhoto(jpeg, rotationToApply);
+            }
             mUsingImageViewForTakenPhoto = true;
             Bitmap bitmap = constructBitmapFromJPEG(jpeg, rotationToApply);
             mImageView.setImageBitmap(bitmap);
@@ -183,8 +191,6 @@ public class MainActivity extends Activity {
     mPreview.setOnClickListener(new OnClickListener() {
       @Override
       public void onClick(View arg0) {
-        PhotoInfo p = PhotoInfo.create();
-        pr("Created: " + p);
         if (mCamera.isOpen()) {
           if (false) {
             mCamera.setPreviewStarted(!mCamera.isPreviewStarted());
