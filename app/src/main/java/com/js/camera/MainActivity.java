@@ -119,7 +119,7 @@ public class MainActivity extends Activity {
   }
 
   private void resumePhotoFile() {
-    mPhotoFile = new PhotoFile(new PhotoFile.Listener() {
+    mPhotoFile = new PhotoFile(this, new PhotoFile.Listener() {
       @Override
       public void stateChanged() {
         pr("PhotoFile state changed to " + mPhotoFile.state());

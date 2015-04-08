@@ -1,9 +1,12 @@
 package com.js.camera;
 
-import android.hardware.Camera;
+import android.content.Context;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+
+import java.io.File;
 
 import static com.js.android.AndroidTools.*;
 import static com.js.basic.Tools.*;
@@ -19,9 +22,10 @@ public class PhotoFile {
     void stateChanged();
   }
 
-  public PhotoFile(Listener listener) {
-    if (listener == null)
+  public PhotoFile(Context context, Listener listener) {
+    if (listener == null || context == null)
       throw new IllegalArgumentException();
+    mContext = context;
     mListener = listener;
     mState = State.Start;
     setTrace(true);
@@ -111,7 +115,17 @@ public class PhotoFile {
     if (SIMULATED_DELAYS)
       sleepFor(1200);
 
-    unimp("Open file");
+    do {
+
+      if (!isExternalStorageWritable()) {
+        setFailed("No writable external storage found");
+        break;
+      }
+      if (!prepareRootDirectory()) {
+        setFailed("Failed to prepare root directory");
+        break;
+      }
+    } while (false);
 
     if (SIMULATED_DELAYS)
       sleepFor(1200);
@@ -121,6 +135,16 @@ public class PhotoFile {
         mListener.stateChanged();
       }
     });
+  }
+
+  private boolean prepareRootDirectory() {
+    mRootDirectory = new File(mContext.getExternalFilesDir(null), "Photos");
+    if (!mRootDirectory.exists())
+      mRootDirectory.mkdir();
+    if (!mRootDirectory.exists())
+      return false;
+    trace("Opened root directory " + mRootDirectory);
+    return true;
   }
 
   private void assertUIThread() {
@@ -143,10 +167,20 @@ public class PhotoFile {
     mBackgroundThreadHandler = new Handler(backgroundThreadHandler.getLooper());
   }
 
+  private boolean isExternalStorageWritable() {
+    String state = Environment.getExternalStorageState();
+    if (Environment.MEDIA_MOUNTED.equals(state)) {
+      return true;
+    }
+    return false;
+  }
+
   private boolean mTrace;
   private State mState;
   private String mFailureMessage;
-  private Listener mListener;
+  private File mRootDirectory;
+  private final Context mContext;
+  private final Listener mListener;
   private Handler mUIThreadHandler;
   private Handler mBackgroundThreadHandler;
 }
