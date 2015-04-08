@@ -168,6 +168,8 @@ public class MainActivity extends Activity {
     mPreview.setOnClickListener(new OnClickListener() {
       @Override
       public void onClick(View arg0) {
+        PhotoInfo p = PhotoInfo.create();
+        pr("Created: " + p);
         if (mCamera.isOpen()) {
           if (false) {
             mCamera.setPreviewStarted(!mCamera.isPreviewStarted());
