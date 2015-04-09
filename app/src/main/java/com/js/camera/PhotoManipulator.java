@@ -1,10 +1,8 @@
 package com.js.camera;
 
-import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 
@@ -13,6 +11,8 @@ import com.js.camera.camera.R;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.zip.CRC32;
+import java.util.zip.Checksum;
 
 import static com.js.basic.Tools.*;
 
@@ -31,6 +31,7 @@ public class PhotoManipulator {
     mPhotoFile = photoFile;
     mPhotoInfo = photoInfo;
     mOriginalBitmap = originalBitmap;
+    calcHashValue();
   }
 
   public Bitmap getManipulatedBitmap() {
@@ -38,6 +39,8 @@ public class PhotoManipulator {
       constructManipulatedBitmap();
     return mOutputBitmap;
   }
+
+  private static final float sFlipBetweenLandscapeAndPortrait[] = {0, 1, 0, 1, 0, 0, 0, 0, 1};
 
   private void constructManipulatedBitmap() {
     constructCanvas();
@@ -47,10 +50,27 @@ public class PhotoManipulator {
     // Vignettes are in landscape mode; if necessary, rotate to portrait
     Matrix matrix = new Matrix();
     if (isPortrait()) {
-      float sFlipBetweenLandscapeAndPortrait[] = {0, 1, 0, 1, 0, 0, 0, 0, 1};
       matrix.setValues(sFlipBetweenLandscapeAndPortrait);
     }
-    mCanvas.drawBitmap(getVignette(), matrix, paint);
+
+    int jpegIndex = (mHashValue >> HASH_SHIFT_VIGNETTE);
+    Bitmap vignetteBitmap = getVignette(jpegIndex);
+
+    // Flip vertically and/or horizontally, based on hash value
+    int flipIndex = myMod(mHashValue >> HASH_SHIFT_VIGNETTE_FLIP, 4);
+    if (0 != (flipIndex & 1)) {
+      Matrix matrix2 = new Matrix();
+      matrix2.postScale(-1, 1);
+      matrix2.postTranslate(vignetteBitmap.getWidth(), 0);
+      matrix.postConcat(matrix2);
+    }
+    if (0 != (flipIndex & 2)) {
+      Matrix matrix2 = new Matrix();
+      matrix2.postScale(1, -1);
+      matrix2.postTranslate(0, vignetteBitmap.getHeight());
+      matrix.postConcat(matrix2);
+    }
+    mCanvas.drawBitmap(vignetteBitmap, matrix, paint);
 
     // Throw out unneeded resources
     mOriginalBitmap = null;
@@ -76,17 +96,27 @@ public class PhotoManipulator {
     mCanvas.setBitmap(mOutputBitmap);
   }
 
-  private Bitmap getVignette() {
-    if (sVignette == null) {
-      try {
-        InputStream stream = mPhotoFile.getContext().getResources().openRawResource(R.raw.vignette3);
-        sVignette = BitmapFactory.decodeStream(stream);
-        stream.close();
-      } catch (IOException e) {
-        die(e);
-      }
-      assertCorrectConfig(sVignette);
+  private static final int[] sVignetteIds = {
+      R.raw.vignette, R.raw.vignette2, R.raw.vignette3};
+
+  private static final int HASH_BITS_VIGNETTE = 3;
+  private static final int HASH_BITS_VIGNETTE_FLIP = 2;
+
+  private static final int HASH_SHIFT_VIGNETTE = 0;
+  private static final int HASH_SHIFT_VIGNETTE_FLIP = HASH_SHIFT_VIGNETTE + HASH_BITS_VIGNETTE;
+  private static final int HASH_SHIFT_next = HASH_SHIFT_VIGNETTE_FLIP + HASH_BITS_VIGNETTE_FLIP;
+
+  private Bitmap getVignette(int vignetteIndex) {
+    Bitmap sVignette = null;
+    try {
+      int vignetteId = sVignetteIds[myMod(vignetteIndex, sVignetteIds.length)];
+      InputStream stream = mPhotoFile.getContext().getResources().openRawResource(vignetteId);
+      sVignette = BitmapFactory.decodeStream(stream);
+      stream.close();
+    } catch (IOException e) {
+      die(e);
     }
+    assertCorrectConfig(sVignette);
     return sVignette;
   }
 
@@ -100,8 +130,17 @@ public class PhotoManipulator {
           IllegalArgumentException("Unexpected Bitmap.Config: " + bitmap);
   }
 
-  private static Bitmap sVignette;
+  /**
+   * Calculate hash value for photo, derived from id and photo file's random seed
+   */
+  private void calcHashValue() {
+    Checksum c = new CRC32();
+    c.update(mPhotoInfo.getId());
+    c.update(mPhotoFile.getRandomSeed());
+    mHashValue = (int) c.getValue();
+  }
 
+  private int mHashValue;
   private PhotoFile mPhotoFile;
   private PhotoInfo mPhotoInfo;
   private Bitmap mOriginalBitmap;
