@@ -361,7 +361,7 @@ public class PhotoFile {
     // Scale photo to size appropriate to starting state
     unimp("scale photo to starting state");
 
-    File photoPath = getPhotoPath(info.getId());
+    File photoPath = getPhotoBitmapPath(info.getId());
     trace("Writing " + info + " to " + photoPath);
     OutputStream stream = new FileOutputStream(photoPath);
     bitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream);
@@ -399,7 +399,7 @@ public class PhotoFile {
     return id;
   }
 
-  private File getPhotoPath(int photoId) {
+  private File getPhotoBitmapPath(int photoId) {
     assertBgndThread();
     return new File(mRootDirectory, "" + photoId + ".jpg");
   }
@@ -410,11 +410,9 @@ public class PhotoFile {
   }
 
   private void readPhotoRecords() {
-    SortedSet<PhotoInfo> photoSet = new TreeSet(new Comparator() {
+    SortedSet<PhotoInfo> photoSet = new TreeSet<PhotoInfo>(new Comparator<PhotoInfo>() {
       @Override
-      public int compare(Object lhs, Object rhs) {
-        PhotoInfo i1 = (PhotoInfo) lhs;
-        PhotoInfo i2 = (PhotoInfo) rhs;
+      public int compare(PhotoInfo i1, PhotoInfo i2) {
         return i1.getId() - i2.getId();
       }
     });
@@ -466,7 +464,7 @@ public class PhotoFile {
   }
 
   private Bitmap readBitmapFromFile(PhotoInfo photoInfo) {
-    File photoPath = getPhotoPath(photoInfo.getId());
+    File photoPath = getPhotoBitmapPath(photoInfo.getId());
     trace("Reading " + photoInfo + " bitmap from " + photoPath);
     Bitmap bitmap = BitmapFactory.decodeFile(photoPath.getPath());
     return bitmap;
@@ -475,7 +473,6 @@ public class PhotoFile {
   private boolean mTrace;
   private State mState;
   private String mFailureMessage;
-  private File mRootDirectory;
   private final Context mContext;
   private final Listener mListener;
   private Handler mUIThreadHandler;
@@ -483,6 +480,7 @@ public class PhotoFile {
 
   // These fields should only be accessed by the background thread
 
+  private File mRootDirectory;
   private boolean mModified;
   private int mNextPhotoId;
   private SortedSet<PhotoInfo> mPhotoSet;
