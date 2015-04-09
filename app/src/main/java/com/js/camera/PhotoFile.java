@@ -11,6 +11,7 @@ import android.os.Looper;
 import com.js.basic.Files;
 import com.js.basic.JSONTools;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -35,6 +36,8 @@ public class PhotoFile {
 
   private static final boolean SIMULATED_DELAYS = false;
   private static final boolean WITH_ASSERTIONS = true;
+  // Start with a fresh photo directory on each run?
+  private static final boolean DELETE_ROOT_DIRECTORY = false;
 
   public interface Listener {
     void stateChanged();
@@ -275,6 +278,10 @@ public class PhotoFile {
         mModified = true;
         flush();
       } else {
+        if (DELETE_ROOT_DIRECTORY) {
+          warning("deleting photos root directory");
+          FileUtils.cleanDirectory(mRootDirectory);
+        }
         readFileState();
       }
       readPhotoRecords();
@@ -310,11 +317,11 @@ public class PhotoFile {
     String jsonString;
     try {
       map.put("nextid", mNextPhotoId);
-      jsonString = map.toString(4);
+      jsonString = map.toString();
     } catch (JSONException e) {
       throw new IOException(e);
     }
-    trace("Writing file state:\n" + jsonString);
+    trace("Writing file state: " + jsonString);
     Files.writeString(getStateFile(), jsonString);
   }
 
@@ -329,7 +336,7 @@ public class PhotoFile {
     if (!stateFile.exists())
       return;
     String jsonString = Files.readString(stateFile);
-    trace("Reading file state from: " + jsonString);
+    trace("Reading file state: " + jsonString);
     try {
       JSONObject map = JSONTools.parseMap(jsonString);
       mNextPhotoId = map.getInt("nextid");
@@ -441,7 +448,6 @@ public class PhotoFile {
           continue;
         }
         photoSet.add(photoInfo);
-        trace("read " + photoInfo);
       }
     }
     mPhotoSet = photoSet;
@@ -453,9 +459,10 @@ public class PhotoFile {
   private void constructBitmap(final PhotoInfo photoInfo) {
     Bitmap bitmap = readBitmapFromFile(photoInfo);
 
-    unimp("manipulate bitmap");
+    PhotoManipulator m = new PhotoManipulator(photoInfo, bitmap);
 
-    final Bitmap finalBitmap = bitmap;
+    final Bitmap finalBitmap = m.getManipulatedBitmap();
+
     mUIThreadHandler.post(new Runnable() {
       public void run() {
         mListener.bitmapConstructed(photoInfo, finalBitmap);

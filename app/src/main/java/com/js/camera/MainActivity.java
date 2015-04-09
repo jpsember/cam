@@ -91,6 +91,8 @@ public class MainActivity extends Activity {
         final Bitmap finalBitmap = bitmap;
         mUIThreadHandler.post(new Runnable() {
           public void run() {
+            if (mImageViewBusy)
+              return;
             mImageView.setImageBitmap(finalBitmap);
           }
         });
@@ -129,7 +131,6 @@ public class MainActivity extends Activity {
       @Override
       public void photoCreated(PhotoInfo photoInfo) {
         pr("Created " + photoInfo);
-        mLastCreatedInfo = photoInfo;
       }
 
       @Override
@@ -210,7 +211,7 @@ public class MainActivity extends Activity {
         if (mCamera.isOpen()) {
           PhotoInfo photoInfo = null;
           List<PhotoInfo> photos = mPhotoFile.getPhotos(0, 100);
-          if (photos.size() < 10)
+          if (photos.size() < 4)
             photos.clear();
           int bestDiff = Integer.MAX_VALUE;
           int previousPhotoId = -1;
@@ -313,6 +314,5 @@ public class MainActivity extends Activity {
   private Handler mUIThreadHandler;
   private boolean mImageViewBusy;
   private PhotoFile mPhotoFile;
-  private PhotoInfo mLastCreatedInfo;
   private PhotoInfo mBitmapLoadingPhotoInfo;
 }
