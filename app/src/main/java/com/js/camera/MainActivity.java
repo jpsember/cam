@@ -39,6 +39,12 @@ import static com.js.android.AndroidTools.*;
 
 public class MainActivity extends Activity {
 
+  private enum Demo {
+    Preview, TakePhotos, PhotoManip,
+  }
+
+  private static final Demo DEMO = Demo.PhotoManip;
+
   @Override
   public void onCreate(Bundle savedInstanceState) {
     startApp(this);
@@ -72,8 +78,6 @@ public class MainActivity extends Activity {
 
         if (mCounter % 40 != 0)
           return;
-        if (mImageViewBusy)
-          return;
 
         if (properties.format() != ImageFormat.NV21)
           throw new UnsupportedOperationException("Unsupported preview image format: " + properties.format());
@@ -91,8 +95,6 @@ public class MainActivity extends Activity {
         final Bitmap finalBitmap = bitmap;
         mUIThreadHandler.post(new Runnable() {
           public void run() {
-            if (mImageViewBusy)
-              return;
             mImageView.setImageBitmap(finalBitmap);
           }
         });
@@ -112,12 +114,14 @@ public class MainActivity extends Activity {
     mCameraViewContainer = new FrameLayout(this);
     {
       mCameraViewContainer.setBackgroundColor(BGND_COLOR);
-      mCameraViewContainer.setPadding(10, 10, 10, 10);
+      if (DEMO == Demo.Preview)
+        mCameraViewContainer.setPadding(10, 10, 10, 10);
     }
-    container.addView(buildImageView());
-    if (false) {
+
+    float weight = (DEMO == Demo.PhotoManip) ? 4.0f : 0.3f;
+    container.addView(buildImageView(), UITools.layoutParams(container, weight));
+    if (DEMO == Demo.Preview)
       ShrinkingView.build(container, 1.0f);
-    }
     container.addView(mCameraViewContainer, UITools.layoutParams(container, 1.0f));
 
     return container;
@@ -145,7 +149,6 @@ public class MainActivity extends Activity {
           warning("bitmap is stale:" + photoInfo);
           return;
         }
-        mImageViewBusy = true;
         mImageView.setImageBitmap(bitmap);
       }
     });
@@ -158,7 +161,8 @@ public class MainActivity extends Activity {
     Toast.makeText(this, getString(R.string.take_photo_help), Toast.LENGTH_LONG).show();
     buildCameraView();
     mCameraViewContainer.addView(mPreview);
-    installPreviewCallback();
+    if (DEMO == Demo.Preview)
+      installPreviewCallback();
 
     mCamera.setListener(
         new MyCamera.Listener() {
@@ -169,10 +173,7 @@ public class MainActivity extends Activity {
 
           @Override
           public void pictureTaken(byte[] jpeg, int rotationToApply) {
-            if (true) {
-              mPhotoFile.createPhoto(jpeg, rotationToApply);
-            }
-            mImageViewBusy = true;
+            mPhotoFile.createPhoto(jpeg, rotationToApply);
             Bitmap bitmap = constructBitmapFromJPEG(jpeg, rotationToApply);
             mImageView.setImageBitmap(bitmap);
             pr("took picture " + bitmap.getWidth() + " x " + bitmap.getHeight());
@@ -194,6 +195,27 @@ public class MainActivity extends Activity {
     mPhotoFile = null;
   }
 
+  private PhotoInfo getNextPhotoFromFile() {
+    PhotoInfo photoInfo = null;
+    List<PhotoInfo> photos = mPhotoFile.getPhotos(0, 100);
+    if (photos.size() < 4)
+      photos.clear();
+    int bestDiff = Integer.MAX_VALUE;
+    int previousPhotoId = -1;
+    if (mBitmapLoadingPhotoInfo != null)
+      previousPhotoId = mBitmapLoadingPhotoInfo.getId();
+    for (PhotoInfo p : photos) {
+      int diff = p.getId() - previousPhotoId;
+      if (diff > 0 && diff < bestDiff) {
+        bestDiff = diff;
+        photoInfo = p;
+      }
+    }
+    if (photoInfo == null && !photos.isEmpty())
+      photoInfo = photos.get(0);
+    return photoInfo;
+  }
+
   private void buildCameraView() {
     mPreview = new CameraPreview(this, mCamera);
     mPreview.setBackgroundColor(BGND_COLOR);
@@ -210,34 +232,23 @@ public class MainActivity extends Activity {
     mPreview.setOnClickListener(new OnClickListener() {
       @Override
       public void onClick(View arg0) {
-        if (mCamera.isOpen()) {
-          PhotoInfo photoInfo = null;
-          List<PhotoInfo> photos = mPhotoFile.getPhotos(0, 100);
-          if (photos.size() < 4)
-            photos.clear();
-          int bestDiff = Integer.MAX_VALUE;
-          int previousPhotoId = -1;
-          if (mBitmapLoadingPhotoInfo != null)
-            previousPhotoId = mBitmapLoadingPhotoInfo.getId();
-          for (PhotoInfo p : photos) {
-            int diff = p.getId() - previousPhotoId;
-            if (diff > 0 && diff < bestDiff) {
-              bestDiff = diff;
-              photoInfo = p;
+        if (!mCamera.isOpen())
+          return;
+        switch (DEMO) {
+          case PhotoManip: {
+            PhotoInfo photoInfo = getNextPhotoFromFile();
+            if (photoInfo != null) {
+              mBitmapLoadingPhotoInfo = photoInfo;
+              mPhotoFile.getBitmap(mBitmapLoadingPhotoInfo);
             }
           }
-          if (photoInfo == null && !photos.isEmpty())
-            photoInfo = photos.get(0);
-          if (photoInfo != null) {
-            mBitmapLoadingPhotoInfo = photoInfo;
-            mPhotoFile.getBitmap(mBitmapLoadingPhotoInfo);
-            return;
-          }
-          if (false) {
+          break;
+          case Preview:
             mCamera.setPreviewStarted(!mCamera.isPreviewStarted());
-          } else {
+            break;
+          case TakePhotos:
             mCamera.takePicture();
-          }
+            break;
         }
       }
     });
@@ -298,7 +309,6 @@ public class MainActivity extends Activity {
   private View buildImageView() {
     mImageView = new ImageView(this);
     mImageView.setBackgroundColor(UITools.debugColor());
-    mImageView.setLayoutParams(new LinearLayout.LayoutParams(500, LinearLayout.LayoutParams.MATCH_PARENT));
     mImageView.setImageResource(R.drawable.ic_launcher);
     return mImageView;
   }
@@ -314,7 +324,6 @@ public class MainActivity extends Activity {
   private FrameLayout mCameraViewContainer;
   private ImageView mImageView;
   private Handler mUIThreadHandler;
-  private boolean mImageViewBusy;
   private PhotoFile mPhotoFile;
   private PhotoInfo mBitmapLoadingPhotoInfo;
 }
