@@ -21,7 +21,13 @@ public class PhotoManipulator {
   private static final int LOGICAL_PORTRAIT_WIDTH = 480;
   private static final int LOGICAL_PORTRAIT_HEIGHT = 640;
 
+  /**
+   * Construct a manipulator for a photo
+   *
+   * @param originalBitmap the bitmap to be manipulated; may be changed by the manipulation
+   */
   public PhotoManipulator(Context context, PhotoInfo photoInfo, Bitmap originalBitmap) {
+    assertCorrectConfig(originalBitmap);
     mContext = context;
     mPhotoInfo = photoInfo;
     mOriginalBitmap = originalBitmap;
@@ -45,6 +51,11 @@ public class PhotoManipulator {
       matrix.setValues(sFlipBetweenLandscapeAndPortrait);
     }
     mCanvas.drawBitmap(getVignette(), matrix, paint);
+
+    // Throw out unneeded resources
+    mOriginalBitmap = null;
+    mCanvas = null;
+    mContext = null;
   }
 
   private void constructCanvas() {
@@ -74,12 +85,19 @@ public class PhotoManipulator {
       } catch (IOException e) {
         die(e);
       }
+      assertCorrectConfig(sVignette);
     }
     return sVignette;
   }
 
   private boolean isPortrait() {
     return BitmapTools.getOrientation(mOriginalBitmap) == BitmapTools.ORIENTATION_PORTRAIT;
+  }
+
+  private static void assertCorrectConfig(Bitmap bitmap) {
+    if (bitmap.getConfig() != Bitmap.Config.ARGB_8888)
+      throw new
+          IllegalArgumentException("Unexpected Bitmap.Config: " + bitmap);
   }
 
   private static Bitmap sVignette;

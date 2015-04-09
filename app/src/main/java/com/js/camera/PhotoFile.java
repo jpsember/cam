@@ -472,7 +472,7 @@ public class PhotoFile {
 
   private Bitmap readBitmapFromFile(PhotoInfo photoInfo) {
     File photoPath = getPhotoBitmapPath(photoInfo.getId());
-    trace("Reading " + photoInfo + " bitmap from " + photoPath);
+    trace("Reading " + photoInfo + " bitmap from " + photoPath.getName());
     Bitmap bitmap = BitmapFactory.decodeFile(photoPath.getPath());
     return bitmap;
   }
