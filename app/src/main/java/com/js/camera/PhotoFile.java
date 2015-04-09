@@ -311,12 +311,16 @@ public class PhotoFile {
     mModified = false;
   }
 
+  private static final String KEY_NEXTID = "nextid";
+  private static final String KEY_RANDOMSEED = "randomseed";
+
   private void writeFileState() throws IOException {
     assertBgndThread();
     JSONObject map = new JSONObject();
     String jsonString;
     try {
-      map.put("nextid", mNextPhotoId);
+      map.put(KEY_NEXTID, mNextPhotoId);
+      map.put(KEY_RANDOMSEED, mRandomSeed);
       jsonString = map.toString();
     } catch (JSONException e) {
       throw new IOException(e);
@@ -339,7 +343,8 @@ public class PhotoFile {
     trace("Reading file state: " + jsonString);
     try {
       JSONObject map = JSONTools.parseMap(jsonString);
-      mNextPhotoId = map.getInt("nextid");
+      mNextPhotoId = map.getInt(KEY_NEXTID);
+      mRandomSeed = map.optInt(KEY_RANDOMSEED, 1);
     } catch (JSONException e) {
       throw new IOException(e);
     }
@@ -394,8 +399,6 @@ public class PhotoFile {
     // Flush the changes, i.e. the unique id
     flush();
     return info;
-
-    // TODO: we don't need to store the unique id, since we'll be reading all records into mem
   }
 
   private int getUniquePhotoId() {
@@ -459,7 +462,7 @@ public class PhotoFile {
   private void constructBitmap(final PhotoInfo photoInfo) {
     Bitmap bitmap = readBitmapFromFile(photoInfo);
 
-    PhotoManipulator m = new PhotoManipulator(mContext, photoInfo, bitmap);
+    PhotoManipulator m = new PhotoManipulator(this, photoInfo, bitmap);
 
     final Bitmap finalBitmap = m.getManipulatedBitmap();
 
@@ -477,6 +480,14 @@ public class PhotoFile {
     return bitmap;
   }
 
+  public int getRandomSeed() {
+    return mRandomSeed;
+  }
+
+  public Context getContext() {
+    return mContext;
+  }
+
   private boolean mTrace;
   private State mState;
   private String mFailureMessage;
@@ -484,6 +495,8 @@ public class PhotoFile {
   private final Listener mListener;
   private Handler mUIThreadHandler;
   private Handler mBackgroundThreadHandler;
+  // This is a constant once the file has been created, so thread doesn't matter
+  private int mRandomSeed;
 
   // These fields should only be accessed by the background thread
 

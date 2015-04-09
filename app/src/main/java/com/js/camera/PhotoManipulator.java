@@ -26,9 +26,9 @@ public class PhotoManipulator {
    *
    * @param originalBitmap the bitmap to be manipulated; may be changed by the manipulation
    */
-  public PhotoManipulator(Context context, PhotoInfo photoInfo, Bitmap originalBitmap) {
+  public PhotoManipulator(PhotoFile photoFile, PhotoInfo photoInfo, Bitmap originalBitmap) {
     assertCorrectConfig(originalBitmap);
-    mContext = context;
+    mPhotoFile = photoFile;
     mPhotoInfo = photoInfo;
     mOriginalBitmap = originalBitmap;
   }
@@ -55,7 +55,7 @@ public class PhotoManipulator {
     // Throw out unneeded resources
     mOriginalBitmap = null;
     mCanvas = null;
-    mContext = null;
+    mPhotoFile = null;
   }
 
   private void constructCanvas() {
@@ -79,7 +79,7 @@ public class PhotoManipulator {
   private Bitmap getVignette() {
     if (sVignette == null) {
       try {
-        InputStream stream = mContext.getResources().openRawResource(R.raw.vignette);
+        InputStream stream = mPhotoFile.getContext().getResources().openRawResource(R.raw.vignette3);
         sVignette = BitmapFactory.decodeStream(stream);
         stream.close();
       } catch (IOException e) {
@@ -102,7 +102,7 @@ public class PhotoManipulator {
 
   private static Bitmap sVignette;
 
-  private Context mContext;
+  private PhotoFile mPhotoFile;
   private PhotoInfo mPhotoInfo;
   private Bitmap mOriginalBitmap;
   private Bitmap mOutputBitmap;
