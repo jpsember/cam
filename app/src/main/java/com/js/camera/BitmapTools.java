@@ -1,11 +1,18 @@
 package com.js.camera;
 
+import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
 
 import com.js.basic.IPoint;
+import com.js.basic.MyMath;
+import com.js.basic.Point;
+import com.js.basic.Rect;
 
 public class BitmapTools {
+
+  public static final int ORIENTATION_LANDSCAPE = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
+  public static final int ORIENTATION_PORTRAIT = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
 
   /**
    * Decode YUV 4:2:0 bitmap to ARGB_8888 format.
@@ -71,4 +78,17 @@ public class BitmapTools {
     return bitmap;
   }
 
+  /**
+   * Scale bitmap, if necessary, to fit a target rectangle, without changing aspect ratio
+   */
+  public static Bitmap scaleBitmapToFit(Bitmap bitmap, IPoint size) {
+    Rect targetRect = new Rect(0, 0, size.x, size.y);
+    Rect originalRect = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
+    Matrix matrix = MyMath.calcRectFitRectTransform(originalRect, targetRect);
+    return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+  }
+
+  public static int getOrientation(Bitmap bitmap) {
+    return (bitmap.getWidth() > bitmap.getHeight()) ? ORIENTATION_LANDSCAPE : ORIENTATION_PORTRAIT;
+  }
 }

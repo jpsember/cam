@@ -459,7 +459,7 @@ public class PhotoFile {
   private void constructBitmap(final PhotoInfo photoInfo) {
     Bitmap bitmap = readBitmapFromFile(photoInfo);
 
-    PhotoManipulator m = new PhotoManipulator(photoInfo, bitmap);
+    PhotoManipulator m = new PhotoManipulator(mContext, photoInfo, bitmap);
 
     final Bitmap finalBitmap = m.getManipulatedBitmap();
 

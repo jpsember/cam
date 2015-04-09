@@ -115,7 +115,9 @@ public class MainActivity extends Activity {
       mCameraViewContainer.setPadding(10, 10, 10, 10);
     }
     container.addView(buildImageView());
-    ShrinkingView.build(container, 1.0f);
+    if (false) {
+      ShrinkingView.build(container, 1.0f);
+    }
     container.addView(mCameraViewContainer, UITools.layoutParams(container, 1.0f));
 
     return container;
@@ -296,7 +298,7 @@ public class MainActivity extends Activity {
   private View buildImageView() {
     mImageView = new ImageView(this);
     mImageView.setBackgroundColor(UITools.debugColor());
-    mImageView.setLayoutParams(new LinearLayout.LayoutParams(240, LinearLayout.LayoutParams.MATCH_PARENT));
+    mImageView.setLayoutParams(new LinearLayout.LayoutParams(500, LinearLayout.LayoutParams.MATCH_PARENT));
     mImageView.setImageResource(R.drawable.ic_launcher);
     return mImageView;
   }
