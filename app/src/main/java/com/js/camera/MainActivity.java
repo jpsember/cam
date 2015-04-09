@@ -131,6 +131,19 @@ public class MainActivity extends Activity {
         pr("Created " + photoInfo);
         mLastCreatedInfo = photoInfo;
       }
+
+      @Override
+      public void bitmapConstructed(PhotoInfo photoInfo, Bitmap bitmap) {
+        if (bitmap == null) {
+          warning("no bitmap for " + photoInfo);
+          return;
+        }
+        if (photoInfo.getId() != mLastCreatedInfo.getId()) {
+          warning("bitmap is stale:" + photoInfo);
+          return;
+        }
+
+      }
     });
     mPhotoFile.open();
   }
@@ -194,23 +207,27 @@ public class MainActivity extends Activity {
       @Override
       public void onClick(View arg0) {
         if (mCamera.isOpen()) {
-          PhotoInfo res = null;
+          PhotoInfo photoInfo = null;
           List<PhotoInfo> photos = mPhotoFile.getPhotos(0, 100);
           if (photos.size() < 10)
             photos.clear();
           int bestDiff = Integer.MAX_VALUE;
+          int previousPhotoId = -1;
+          if (mBitmapLoadingPhotoInfo != null)
+            previousPhotoId = mBitmapLoadingPhotoInfo.getId();
           for (PhotoInfo p : photos) {
-            int diff = p.getId() - mPreviousPhotoId;
+            int diff = p.getId() - previousPhotoId;
             if (diff > 0 && diff < bestDiff) {
               bestDiff = diff;
-              res = p;
+              photoInfo = p;
             }
           }
-          if (res == null && !photos.isEmpty())
-            res = photos.get(0);
-          if (res != null) {
-            pr("to do: display " + res);
-            mPreviousPhotoId = res.getId();
+          if (photoInfo == null && !photos.isEmpty())
+            photoInfo = photos.get(0);
+          if (photoInfo != null) {
+            pr("to do: display " + photoInfo);
+            mBitmapLoadingPhotoInfo = photoInfo;
+            mPhotoFile.getBitmap(mBitmapLoadingPhotoInfo);
             return;
           }
           if (false) {
@@ -222,8 +239,6 @@ public class MainActivity extends Activity {
       }
     });
   }
-
-  private int mPreviousPhotoId = -1;
 
   @Override
   protected void onResume() {
@@ -299,4 +314,5 @@ public class MainActivity extends Activity {
   private boolean mUsingImageViewForTakenPhoto;
   private PhotoFile mPhotoFile;
   private PhotoInfo mLastCreatedInfo;
+  private PhotoInfo mBitmapLoadingPhotoInfo;
 }

@@ -40,6 +40,8 @@ public class PhotoFile {
     void stateChanged();
 
     void photoCreated(PhotoInfo photoInfo);
+
+    void bitmapConstructed(PhotoInfo photoInfo, Bitmap bitmap);
   }
 
   public PhotoFile(Context context, Listener listener) {
@@ -142,6 +144,19 @@ public class PhotoFile {
       }
     }
     return list;
+  }
+
+  /**
+   * Construct a suitably aged bitmap for a photo
+   */
+  public void getBitmap(final PhotoInfo photoInfo) {
+    assertOpen();
+    photoInfo.assertFrozen();
+    mBackgroundThreadHandler.post(new Runnable() {
+      public void run() {
+        constructBitmap(photoInfo);
+      }
+    });
   }
 
   private static boolean isUIThread() {
@@ -432,6 +447,18 @@ public class PhotoFile {
       }
     }
     mPhotoSet = photoSet;
+  }
+
+  /**
+   * Construct a suitably aged bitmap for a photo
+   */
+  private void constructBitmap(final PhotoInfo photoInfo) {
+    mUIThreadHandler.post(new Runnable() {
+      public void run() {
+        unimp("construct bitmap");
+        mListener.bitmapConstructed(photoInfo, null);
+      }
+    });
   }
 
   private boolean mTrace;
