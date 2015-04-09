@@ -16,7 +16,8 @@ public class PhotoInfo extends Freezable.Mutable {
   public Freezable getMutableCopy() {
     PhotoInfo p = new PhotoInfo();
     p.mCreationTime = mCreationTime;
-    p.mAgeState = mAgeState;
+    p.mCurrentAgeState = mCurrentAgeState;
+    p.mTargetAgeState = mTargetAgeState;
     p.mId = mId;
     return p;
   }
@@ -51,13 +52,24 @@ public class PhotoInfo extends Freezable.Mutable {
     return mCreationTime;
   }
 
-  public void setAgeState(int ageState) {
+  public void setCurrentAgeState(int ageState) {
     mutate();
-    mAgeState = ageState;
+    mCurrentAgeState = ageState;
   }
 
-  public int getAgeState() {
-    return mAgeState;
+  public int getCurrentAgeState() {
+    return mCurrentAgeState;
+  }
+
+  public void setTargetAgeState(int ageState) {
+    if (ageState < mCurrentAgeState)
+      throw new IllegalArgumentException();
+    mutate();
+    mTargetAgeState = ageState;
+  }
+
+  public int getTargetAgeState() {
+    return mTargetAgeState;
   }
 
   public void setId(int id) {
@@ -73,7 +85,7 @@ public class PhotoInfo extends Freezable.Mutable {
   public String toString() {
     String s = "PhotoInfo";
     s = s + " id " + d(getId());
-    s = s + " age " + getAgeState();
+    s = s + " state(curr=" + getCurrentAgeState() + ", target=" + getTargetAgeState() + ")";
     return s;
   }
 
@@ -86,7 +98,8 @@ public class PhotoInfo extends Freezable.Mutable {
             JSONObject map = new JSONObject();
             map.put("id", getId());
             map.put("created", getCreationTime());
-            map.put("state", getAgeState());
+            map.put("currentstate", getCurrentAgeState());
+            map.put("desiredstate", getTargetAgeState());
             mJSON = map.toString();
           } catch (JSONException e) {
             die(e);
@@ -102,13 +115,15 @@ public class PhotoInfo extends Freezable.Mutable {
     PhotoInfo p = new PhotoInfo();
     p.setId(map.getInt("id"));
     p.setCreationTime(map.getInt("created"));
-    p.setAgeState(map.getInt("state"));
+    p.setCurrentAgeState(map.getInt("currentstate"));
+    p.setTargetAgeState(map.getInt("desiredstate"));
     p.freeze();
     return p;
   }
 
   private int mCreationTime;
-  private int mAgeState;
+  private int mCurrentAgeState;
+  private int mTargetAgeState;
   private int mId;
   private volatile String mJSON;
 }
