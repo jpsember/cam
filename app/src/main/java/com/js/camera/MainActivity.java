@@ -72,7 +72,7 @@ public class MainActivity extends Activity {
 
         if (mCounter % 40 != 0)
           return;
-        if (mUsingImageViewForTakenPhoto)
+        if (mImageViewBusy)
           return;
 
         if (properties.format() != ImageFormat.NV21)
@@ -138,11 +138,12 @@ public class MainActivity extends Activity {
           warning("no bitmap for " + photoInfo);
           return;
         }
-        if (photoInfo.getId() != mLastCreatedInfo.getId()) {
+        if (photoInfo.getId() != mBitmapLoadingPhotoInfo.getId()) {
           warning("bitmap is stale:" + photoInfo);
           return;
         }
-
+        mImageViewBusy = true;
+        mImageView.setImageBitmap(bitmap);
       }
     });
     mPhotoFile.open();
@@ -168,7 +169,7 @@ public class MainActivity extends Activity {
             if (true) {
               mPhotoFile.createPhoto(jpeg, rotationToApply);
             }
-            mUsingImageViewForTakenPhoto = true;
+            mImageViewBusy = true;
             Bitmap bitmap = constructBitmapFromJPEG(jpeg, rotationToApply);
             mImageView.setImageBitmap(bitmap);
             pr("took picture " + bitmap.getWidth() + " x " + bitmap.getHeight());
@@ -225,7 +226,6 @@ public class MainActivity extends Activity {
           if (photoInfo == null && !photos.isEmpty())
             photoInfo = photos.get(0);
           if (photoInfo != null) {
-            pr("to do: display " + photoInfo);
             mBitmapLoadingPhotoInfo = photoInfo;
             mPhotoFile.getBitmap(mBitmapLoadingPhotoInfo);
             return;
@@ -311,7 +311,7 @@ public class MainActivity extends Activity {
   private FrameLayout mCameraViewContainer;
   private ImageView mImageView;
   private Handler mUIThreadHandler;
-  private boolean mUsingImageViewForTakenPhoto;
+  private boolean mImageViewBusy;
   private PhotoFile mPhotoFile;
   private PhotoInfo mLastCreatedInfo;
   private PhotoInfo mBitmapLoadingPhotoInfo;

@@ -453,12 +453,23 @@ public class PhotoFile {
    * Construct a suitably aged bitmap for a photo
    */
   private void constructBitmap(final PhotoInfo photoInfo) {
+    Bitmap bitmap = readBitmapFromFile(photoInfo);
+
+    unimp("manipulate bitmap");
+
+    final Bitmap finalBitmap = bitmap;
     mUIThreadHandler.post(new Runnable() {
       public void run() {
-        unimp("construct bitmap");
-        mListener.bitmapConstructed(photoInfo, null);
+        mListener.bitmapConstructed(photoInfo, finalBitmap);
       }
     });
+  }
+
+  private Bitmap readBitmapFromFile(PhotoInfo photoInfo) {
+    File photoPath = getPhotoPath(photoInfo.getId());
+    trace("Reading " + photoInfo + " bitmap from " + photoPath);
+    Bitmap bitmap = BitmapFactory.decodeFile(photoPath.getPath());
+    return bitmap;
   }
 
   private boolean mTrace;
