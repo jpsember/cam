@@ -1,23 +1,15 @@
 package com.js.camera;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.List;
 
 import android.app.Activity;
-import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.hardware.Camera;
-import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
@@ -27,7 +19,6 @@ import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.Toast;
 
 import com.js.android.AppPreferences;
 import com.js.android.UITools;
@@ -76,6 +67,7 @@ public class MainActivity extends Activity {
         if (previewSize == null)
           return;
 
+        mCounter++;
         if (mCounter % 40 != 0)
           return;
 
@@ -176,7 +168,6 @@ public class MainActivity extends Activity {
       }
     });
 
-    Toast.makeText(this, getString(R.string.take_photo_help), Toast.LENGTH_LONG).show();
     buildCameraView();
     mCameraViewContainer.addView(mPreview);
     if (DEMO == Demo.Preview)
@@ -268,44 +259,6 @@ public class MainActivity extends Activity {
     pausePhotoFile();
     pauseCamera();
     super.onPause();
-  }
-
-  private void refreshGallery(File file) {
-    Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-    mediaScanIntent.setData(Uri.fromFile(file));
-    sendBroadcast(mediaScanIntent);
-  }
-
-  private class SaveImageTask extends AsyncTask<byte[], Void, Void> {
-
-    @Override
-    protected Void doInBackground(byte[]... data) {
-
-      // Write to SD Card
-      try {
-        File sdCard = Environment.getExternalStorageDirectory();
-        File dir = new File(sdCard.getAbsolutePath() + "/camtest");
-        dir.mkdirs();
-
-        String fileName = String.format("%d.jpg", System.currentTimeMillis());
-        File outFile = new File(dir, fileName);
-
-        FileOutputStream outStream = new FileOutputStream(outFile);
-        outStream.write(data[0]);
-        outStream.flush();
-        outStream.close();
-
-        pr("onPictureTaken - wrote bytes: " + data.length + " to " + outFile.getAbsolutePath());
-
-        refreshGallery(outFile);
-      } catch (FileNotFoundException e) {
-        e.printStackTrace();
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-      return null;
-    }
-
   }
 
   private View buildImageView() {
