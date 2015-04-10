@@ -5,8 +5,6 @@ import android.graphics.BitmapFactory;
 
 import com.js.basic.IPoint;
 
-import java.io.ByteArrayOutputStream;
-
 import static com.js.basic.Tools.*;
 
 public class PhotoAger {
@@ -45,6 +43,12 @@ public class PhotoAger {
       size.y &= ~1;
     }
     return size;
+  }
+
+  private int calcJPEGQualityForAge(int ageState) {
+    float scale = (PhotoInfo.JPEG_QUALITY_MAX * (PhotoInfo.AGE_STATE_MAX - 1 - ageState)
+        + (PhotoInfo.JPEG_QUALITY_MIN * ageState)) / (PhotoInfo.AGE_STATE_MAX - 1);
+    return (int) scale;
   }
 
   private float calcColorScaleForAge(int ageState) {
@@ -89,12 +93,7 @@ public class PhotoAger {
       }
 
       // Convert back to JPEG array of bytes
-
-      ByteArrayOutputStream stream = new ByteArrayOutputStream();
-      bitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream);
-      unimp("JPEG quality settings");
-
-      mCurrentJPEG = stream.toByteArray();
+      mCurrentJPEG = BitmapTools.encodeJPEG(bitmap, calcJPEGQualityForAge(newAge));
       mAgedPhotoInfo = frozen(newInfo);
     }
   }

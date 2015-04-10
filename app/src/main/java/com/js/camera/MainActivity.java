@@ -146,10 +146,8 @@ public class MainActivity extends Activity implements OnClickListener {
         }
         mImageView.setImageBitmap(bitmap);
         if (DEMO == Demo.PhotoAger) {
-          ByteArrayOutputStream stream = new ByteArrayOutputStream();
-          bitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream);
-          mAgeBitmap = stream.toByteArray();
-        }
+          mAgeBitmap = BitmapTools.encodeJPEG(bitmap,80);
+       }
       }
     });
     mPhotoFile.open();
@@ -170,7 +168,7 @@ public class MainActivity extends Activity implements OnClickListener {
         mPhotoFile.createPhoto(jpeg, rotationToApply);
         Bitmap bitmap = constructBitmapFromJPEG(jpeg, rotationToApply);
         mImageView.setImageBitmap(bitmap);
-        pr("took picture " + bitmap.getWidth() + " x " + bitmap.getHeight());
+        pr("took picture " + BitmapTools.size(bitmap));
       }
     });
 

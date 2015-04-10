@@ -376,7 +376,7 @@ public class PhotoFile {
     File photoPath = getPhotoBitmapPath(info.getId());
     trace("Writing " + info + " to " + photoPath);
     OutputStream stream = new FileOutputStream(photoPath);
-    bitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream);
+    bitmap.compress(Bitmap.CompressFormat.JPEG, PhotoInfo.JPEG_QUALITY_MAX, stream);
 
     return info;
   }

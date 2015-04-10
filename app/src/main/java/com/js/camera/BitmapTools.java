@@ -8,6 +8,8 @@ import com.js.basic.IPoint;
 import com.js.basic.MyMath;
 import com.js.basic.Rect;
 
+import java.io.ByteArrayOutputStream;
+
 import static com.js.basic.Tools.*;
 
 public class BitmapTools {
@@ -195,4 +197,17 @@ public class BitmapTools {
       }
     }
   }
+
+  public static IPoint size(Bitmap bitmap) {
+    return new IPoint(bitmap.getWidth(), bitmap.getHeight());
+  }
+
+  public static byte[] encodeJPEG(Bitmap bitmap, int quality) {
+    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+    bitmap.compress(Bitmap.CompressFormat.JPEG, quality, stream);
+    byte[] bytes = stream.toByteArray();
+//    pr("encoded JPEG of size "+size(bitmap)+", quality "+quality+", length "+bytes.length);
+    return bytes;
+  }
+
 }

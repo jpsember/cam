@@ -16,6 +16,9 @@ public class PhotoInfo extends Freezable.Mutable {
   private static final int LOGICAL_PORTRAIT_WIDTH = 480;
   private static final int LOGICAL_PORTRAIT_HEIGHT = 640;
 
+  public static final int JPEG_QUALITY_MAX = 80;
+  public static final int JPEG_QUALITY_MIN = 50;
+
   public static IPoint getLogicalMaximumSize(boolean isPortrait) {
     IPoint targetSize;
     if (isPortrait) {
