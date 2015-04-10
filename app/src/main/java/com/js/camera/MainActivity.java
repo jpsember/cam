@@ -146,8 +146,8 @@ public class MainActivity extends Activity implements OnClickListener {
         }
         mImageView.setImageBitmap(bitmap);
         if (DEMO == Demo.PhotoAger) {
-          mAgeBitmap = BitmapTools.encodeJPEG(bitmap,80);
-       }
+          mAgeBitmap = BitmapTools.encodeJPEG(bitmap, 80);
+        }
       }
     });
     mPhotoFile.open();
@@ -312,7 +312,9 @@ public class MainActivity extends Activity implements OnClickListener {
         mAgePhotoInfo = ager.getAgedInfo();
 
         Bitmap bitmap = BitmapFactory.decodeByteArray(mAgeBitmap, 0, mAgeBitmap.length);
-        mImageView.setImageBitmap(bitmap);
+        // This should perhaps be done in the photo file thread...
+        PhotoManipulator m = new PhotoManipulator(mPhotoFile, mAgePhotoInfo, bitmap);
+        mImageView.setImageBitmap(m.getManipulatedBitmap());
         break;
     }
   }

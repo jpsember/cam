@@ -42,9 +42,7 @@ public class PhotoManipulator {
   private void constructManipulatedBitmap() {
     constructCanvas();
 
-    warning("Disabled vignette");
-    if (false)
-      applyVignette();
+    applyVignette();
 
     // Throw out unneeded resources
     mOriginalBitmap = null;
@@ -52,9 +50,16 @@ public class PhotoManipulator {
     mPhotoFile = null;
   }
 
+  private int calcVignetteAlphaForAge() {
+    int ageState = mPhotoInfo.getCurrentAgeState();
+    float scale = (0 * (PhotoInfo.AGE_STATE_MAX - 1 - ageState)
+        + (80 * ageState)) / (PhotoInfo.AGE_STATE_MAX - 1);
+    return (int) scale;
+  }
+
   private void applyVignette() {
     Paint paint = new Paint();
-    paint.setAlpha(128);
+    paint.setAlpha(calcVignetteAlphaForAge());
     // Vignettes are in landscape mode; if necessary, rotate to portrait
     Matrix matrix = new Matrix();
     if (isPortrait()) {
