@@ -40,17 +40,14 @@ public class MyCamera {
     void pictureTaken(byte[] jpeg, int rotationToApply);
   }
 
-  public MyCamera(Activity activity) {
+  public MyCamera(Activity activity, Listener listener) {
     mState = State.Start;
+    mListener = listener;
 //    setTrace(true);
     mDeviceRotation = activity.getWindowManager().getDefaultDisplay()
         .getRotation();
     doNothing();
     doNothingAndroid();
-  }
-
-  public void setListener(Listener listener) {
-    mListener = listener;
   }
 
   private enum State {
@@ -112,8 +109,7 @@ public class MyCamera {
     if (mState != state) {
       trace("Changing state from " + mState + " to " + state);
       mState = state;
-      if (mListener != null)
-        mListener.stateChanged();
+      mListener.stateChanged();
     }
   }
 
@@ -249,7 +245,7 @@ public class MyCamera {
       mUIThreadHandler.post(new Runnable() {
         public void run() {
           try {
-            if (mListener != null && data != null)
+            if (data != null)
               mListener.pictureTaken(data, mCorrectingRotation);
           } finally {
             // The Camera class stopped the preview to take the picture; so

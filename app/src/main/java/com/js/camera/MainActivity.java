@@ -158,33 +158,29 @@ public class MainActivity extends Activity {
   }
 
   private void resumeCamera() {
-    mCamera = new MyCamera(this);
+    mCamera = new MyCamera(this, new MyCamera.Listener() {
+      @Override
+      public void stateChanged() {
+        if (mCamera.isOpen())
+          mPreview.cameraOpen();
+      }
+
+      @Override
+      public void pictureTaken(byte[] jpeg, int rotationToApply) {
+        if (!mPhotoFile.isOpen())
+          return;
+        mPhotoFile.createPhoto(jpeg, rotationToApply);
+        Bitmap bitmap = constructBitmapFromJPEG(jpeg, rotationToApply);
+        mImageView.setImageBitmap(bitmap);
+        pr("took picture " + bitmap.getWidth() + " x " + bitmap.getHeight());
+      }
+    });
 
     Toast.makeText(this, getString(R.string.take_photo_help), Toast.LENGTH_LONG).show();
     buildCameraView();
     mCameraViewContainer.addView(mPreview);
     if (DEMO == Demo.Preview)
       installPreviewCallback();
-
-    mCamera.setListener(
-        new MyCamera.Listener() {
-          @Override
-          public void stateChanged() {
-            if (mCamera.isOpen())
-              mPreview.cameraOpen();
-          }
-
-          @Override
-          public void pictureTaken(byte[] jpeg, int rotationToApply) {
-            if (!mPhotoFile.isOpen())
-              return;
-            mPhotoFile.createPhoto(jpeg, rotationToApply);
-            Bitmap bitmap = constructBitmapFromJPEG(jpeg, rotationToApply);
-            mImageView.setImageBitmap(bitmap);
-            pr("took picture " + bitmap.getWidth() + " x " + bitmap.getHeight());
-          }
-        }
-    );
 
     mCamera.open();
   }
