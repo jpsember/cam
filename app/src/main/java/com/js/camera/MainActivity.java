@@ -131,6 +131,8 @@ public class MainActivity extends Activity {
     mPhotoFile = new PhotoFile(this, new PhotoFile.Listener() {
       @Override
       public void stateChanged() {
+        if (!mPhotoFile.isOpen())
+          return;
         pr("PhotoFile state changed to " + mPhotoFile.state());
       }
 
@@ -167,12 +169,15 @@ public class MainActivity extends Activity {
     mCamera.setListener(
         new MyCamera.Listener() {
           @Override
-          public void cameraChanged(Camera camera) {
-            mPreview.cameraChanged(camera);
+          public void stateChanged() {
+            if (mCamera.isOpen())
+              mPreview.cameraOpen();
           }
 
           @Override
           public void pictureTaken(byte[] jpeg, int rotationToApply) {
+            if (!mPhotoFile.isOpen())
+              return;
             mPhotoFile.createPhoto(jpeg, rotationToApply);
             Bitmap bitmap = constructBitmapFromJPEG(jpeg, rotationToApply);
             mImageView.setImageBitmap(bitmap);
@@ -192,7 +197,6 @@ public class MainActivity extends Activity {
 
   private void pausePhotoFile() {
     mPhotoFile.close();
-    mPhotoFile = null;
   }
 
   private PhotoInfo getNextPhotoFromFile() {
@@ -236,6 +240,8 @@ public class MainActivity extends Activity {
           return;
         switch (DEMO) {
           case PhotoManip: {
+            if (!mPhotoFile.isOpen())
+              return;
             PhotoInfo photoInfo = getNextPhotoFromFile();
             if (photoInfo != null) {
               mBitmapLoadingPhotoInfo = photoInfo;

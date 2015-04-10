@@ -8,7 +8,6 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
-import android.hardware.Camera;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -100,18 +99,16 @@ public class CameraPreview extends ViewGroup implements SurfaceHolder.Callback {
     layoutOverlayViews(innerRect);
   }
 
-  public void cameraChanged(Camera camera) {
-    trace("cameraChanged to " + nameOf(camera));
-    if (camera != null) {
-      if (mSurfaceView == null) {
-        mSurfaceView = new SurfaceView(this.getContext());
-        addView(mSurfaceView);
-        mSurfaceView.getHolder().addCallback(this);
-        // Construct overlay view last, since it should appear in front
-        constructOverlayView();
-      }
-      mCamera.startPreview();
+  public void cameraOpen() {
+    trace("cameraOpen");
+    if (mSurfaceView == null) {
+      mSurfaceView = new SurfaceView(this.getContext());
+      addView(mSurfaceView);
+      mSurfaceView.getHolder().addCallback(this);
+      // Construct overlay view last, since it should appear in front
+      constructOverlayView();
     }
+    mCamera.startPreview();
   }
 
   // ------------- SurfaceHolder.Callback interface

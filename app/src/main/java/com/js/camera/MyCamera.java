@@ -1,8 +1,6 @@
 package com.js.camera;
 
 import android.app.Activity;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.hardware.Camera;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -32,10 +30,9 @@ public class MyCamera {
 
   public interface Listener {
     /**
-     * Called when the Camera object has been assigned a new value (null if it's been closed,
-     * non-null if it's been opened)
+     * Called when the MyCamera state has changed
      */
-    void cameraChanged(Camera camera);
+    void stateChanged();
 
     /**
      * Called when a picture taken via takePicture() is available
@@ -101,10 +98,10 @@ public class MyCamera {
 
     mBackgroundThreadHandler.post(new Runnable() {
       public void run() {
-        final Camera camera = backgroundThreadOpenCamera();
+        mCamera = backgroundThreadOpenCamera();
         mUIThreadHandler.post(new Runnable() {
           public void run() {
-            processCameraReceivedFromBackgroundThread(camera);
+            processCameraReceivedFromBackgroundThread();
           }
         });
       }
@@ -115,6 +112,8 @@ public class MyCamera {
     if (mState != state) {
       trace("Changing state from " + mState + " to " + state);
       mState = state;
+      if (mListener != null)
+        mListener.stateChanged();
     }
   }
 
@@ -170,12 +169,15 @@ public class MyCamera {
   public void close() {
     assertUIThread();
     trace("close()");
-    if (!isOpen())
-      return;
-    stopPreview();
+
+    // State may be Opening, not just Open
+    if (isOpen())
+      stopPreview();
+
+    if (mCamera != null) {
+      mCamera.release();
+    }
     setState(State.Closed);
-    mCamera.release();
-    setCamera(null);
   }
 
   public void assertOpen() {
@@ -340,25 +342,22 @@ public class MyCamera {
     return camera;
   }
 
-  private void processCameraReceivedFromBackgroundThread(Camera camera) {
-    trace("processCameraReceived " + nameOf(camera));
-    if (camera == null) {
+  private void processCameraReceivedFromBackgroundThread() {
+    trace("processCameraReceived " + nameOf(mCamera));
+    if (mCamera == null) {
       setFailed("Opening camera");
       return;
     }
     // If state is unexpected, app may have shut down or something
     if (mState != State.Opening) {
       warning("Stale state: " + this);
+      mCamera.release();
       return;
     }
 
+    constructProperties(mCamera);
+    mCamera.setDisplayOrientation(mProperties.rotation());
     setState(State.Open);
-    constructProperties(camera);
-
-    camera.setDisplayOrientation(mProperties.rotation());
-
-    // Set the camera, and give listener an opportunity to e.g. start preview
-    setCamera(camera);
   }
 
   private void constructProperties(Camera camera) {
@@ -367,14 +366,6 @@ public class MyCamera {
     p.setPreviewSizes(camera.getParameters());
     p.mFormat = camera.getParameters().getPreviewFormat();
     setProperties(p);
-  }
-
-  private void setCamera(Camera camera) {
-    if (mCamera != camera) {
-      mCamera = camera;
-      if (mListener != null)
-        mListener.cameraChanged(mCamera);
-    }
   }
 
   private void assertUIThread() {
@@ -393,7 +384,10 @@ public class MyCamera {
     return mProperties;
   }
 
+  // The camera is constructed by the background thread, and once
+  // assigned, is never changed
   private Camera mCamera;
+
   private int mCameraId;
   // Rotation to be applied to captured images to agree with device rotation
   private int mCorrectingRotation;
@@ -408,8 +402,6 @@ public class MyCamera {
   private Handler mUIThreadHandler;
   private Handler mBackgroundThreadHandler;
   private Properties mProperties;
-  // Bitmap received from taken picture
-  private Bitmap mBitmapTaken;
 
   /**
    * Object containing camera preview properties; immutable for thread safety.
