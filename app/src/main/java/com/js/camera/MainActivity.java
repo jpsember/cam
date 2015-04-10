@@ -34,7 +34,7 @@ public class MainActivity extends Activity {
     Preview, TakePhotos, PhotoManip,
   }
 
-  private static final Demo DEMO = Demo.PhotoManip;
+  private static final Demo DEMO = Demo.Preview; //PhotoManip;
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
@@ -84,6 +84,18 @@ public class MainActivity extends Activity {
           bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
         }
 
+        if (true) {
+          // test rgb -> yuv conversion
+          byte[] yuv = BitmapTools.getYUV420SP(bitmap, null);
+          BitmapTools.scaleYUV420SP(yuv, previewSize, 2.0f, .3f, .3f);
+          int[] argb2 =
+              BitmapTools.decodeYUV420SP(null, yuv, previewSize);
+
+          Bitmap bitmap2 = Bitmap.createBitmap(argb2, previewSize.x, previewSize.y,
+              Bitmap.Config.ARGB_8888);
+          bitmap = bitmap2;
+        }
+
         final Bitmap finalBitmap = bitmap;
         mUIThreadHandler.post(new Runnable() {
           public void run() {
@@ -110,7 +122,7 @@ public class MainActivity extends Activity {
         mCameraViewContainer.setPadding(10, 10, 10, 10);
     }
 
-    float weight = (DEMO == Demo.PhotoManip) ? 4.0f : 0.3f;
+    float weight = (DEMO == Demo.PhotoManip) ? 4.0f : 0.8f;
     container.addView(buildImageView(), UITools.layoutParams(container, weight));
     if (DEMO == Demo.Preview)
       ShrinkingView.build(container, 1.0f);
