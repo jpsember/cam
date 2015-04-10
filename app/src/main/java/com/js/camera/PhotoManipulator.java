@@ -18,9 +18,6 @@ import static com.js.basic.Tools.*;
 
 public class PhotoManipulator {
 
-  private static final int LOGICAL_PORTRAIT_WIDTH = 480;
-  private static final int LOGICAL_PORTRAIT_HEIGHT = 640;
-
   /**
    * Construct a manipulator for a photo
    *
@@ -79,13 +76,8 @@ public class PhotoManipulator {
   }
 
   private void constructCanvas() {
-    IPoint targetSize;
-    if (isPortrait()) {
-      targetSize = new IPoint(LOGICAL_PORTRAIT_WIDTH, LOGICAL_PORTRAIT_HEIGHT);
-    } else {
-      targetSize = new IPoint(LOGICAL_PORTRAIT_HEIGHT, LOGICAL_PORTRAIT_WIDTH);
-    }
-    Bitmap bitmap = BitmapTools.scaleBitmapToFit(mOriginalBitmap, targetSize);
+    IPoint targetSize = PhotoInfo.getLogicalMaximumSize(isPortrait());
+    Bitmap bitmap = BitmapTools.scaleBitmapToFit(mOriginalBitmap, targetSize, true);
     // Construct a copy of the scaled bitmap, so we don't modify the original
     bitmap = bitmap.copy(bitmap.getConfig(), true);
     if (bitmap == null)

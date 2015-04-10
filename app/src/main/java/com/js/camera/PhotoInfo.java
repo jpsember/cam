@@ -1,6 +1,7 @@
 package com.js.camera;
 
 import com.js.basic.Freezable;
+import com.js.basic.IPoint;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -11,6 +12,21 @@ import static com.js.basic.Tools.*;
  * Information about a photo, including when it was created, and its current age state
  */
 public class PhotoInfo extends Freezable.Mutable {
+
+  private static final int LOGICAL_PORTRAIT_WIDTH = 480;
+  private static final int LOGICAL_PORTRAIT_HEIGHT = 640;
+
+  public static IPoint getLogicalMaximumSize(boolean isPortrait) {
+    IPoint targetSize;
+    if (isPortrait) {
+      targetSize = new IPoint(LOGICAL_PORTRAIT_WIDTH, LOGICAL_PORTRAIT_HEIGHT);
+    } else {
+      targetSize = new IPoint(LOGICAL_PORTRAIT_HEIGHT, LOGICAL_PORTRAIT_WIDTH);
+    }
+    return targetSize;
+  }
+
+  public static final int AGE_STATE_MAX = 12;
 
   @Override
   public Freezable getMutableCopy() {

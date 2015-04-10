@@ -1,5 +1,6 @@
 package com.js.camera;
 
+import java.io.ByteArrayOutputStream;
 import java.util.List;
 
 import android.app.Activity;
@@ -28,13 +29,13 @@ import com.js.camera.camera.R;
 import static com.js.basic.Tools.*;
 import static com.js.android.AndroidTools.*;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements OnClickListener {
 
   private enum Demo {
-    Preview, TakePhotos, PhotoManip,
+    Preview, TakePhotos, PhotoManip, PhotoAger
   }
 
-  private static final Demo DEMO = Demo.Preview; //PhotoManip;
+  private static final Demo DEMO = Demo.PhotoAger;
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
@@ -84,18 +85,6 @@ public class MainActivity extends Activity {
           bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
         }
 
-        if (true) {
-          // test rgb -> yuv conversion
-          byte[] yuv = BitmapTools.getYUV420SP(bitmap, null);
-          BitmapTools.scaleYUV420SP(yuv, previewSize, 2.0f, .3f, .3f);
-          int[] argb2 =
-              BitmapTools.decodeYUV420SP(null, yuv, previewSize);
-
-          Bitmap bitmap2 = Bitmap.createBitmap(argb2, previewSize.x, previewSize.y,
-              Bitmap.Config.ARGB_8888);
-          bitmap = bitmap2;
-        }
-
         final Bitmap finalBitmap = bitmap;
         mUIThreadHandler.post(new Runnable() {
           public void run() {
@@ -122,7 +111,7 @@ public class MainActivity extends Activity {
         mCameraViewContainer.setPadding(10, 10, 10, 10);
     }
 
-    float weight = (DEMO == Demo.PhotoManip) ? 4.0f : 0.8f;
+    float weight = (DEMO == Demo.PhotoManip || DEMO == Demo.PhotoAger) ? 4.0f : 0.8f;
     container.addView(buildImageView(), UITools.layoutParams(container, weight));
     if (DEMO == Demo.Preview)
       ShrinkingView.build(container, 1.0f);
@@ -156,6 +145,11 @@ public class MainActivity extends Activity {
           return;
         }
         mImageView.setImageBitmap(bitmap);
+        if (DEMO == Demo.PhotoAger) {
+          ByteArrayOutputStream stream = new ByteArrayOutputStream();
+          bitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream);
+          mAgeBitmap = stream.toByteArray();
+        }
       }
     });
     mPhotoFile.open();
@@ -232,31 +226,64 @@ public class MainActivity extends Activity {
       mPreview.setFrameStyle(CameraPreview.FRAMESTYLE_NONE);
 
     mPreview.setKeepScreenOn(true);
-    mPreview.setOnClickListener(new OnClickListener() {
-      @Override
-      public void onClick(View arg0) {
-        if (!mCamera.isOpen())
+    mPreview.setOnClickListener(this);
+  }
+
+  @Override
+  public void onClick(View arg0) {
+    if (!mCamera.isOpen())
+      return;
+    switch (DEMO) {
+      case PhotoAger: {
+        if (!mPhotoFile.isOpen())
           return;
-        switch (DEMO) {
-          case PhotoManip: {
-            if (!mPhotoFile.isOpen())
-              return;
-            PhotoInfo photoInfo = getNextPhotoFromFile();
-            if (photoInfo != null) {
-              mBitmapLoadingPhotoInfo = photoInfo;
-              mPhotoFile.getBitmap(mBitmapLoadingPhotoInfo);
-            }
-          }
+        if (mAgePhotoInfo == null) {
+          PhotoInfo photoInfo = getNextPhotoFromFile();
+          ASSERT(photoInfo != null);
+          mAgePhotoInfo = photoInfo;
+          mBitmapLoadingPhotoInfo = photoInfo;
+          mPhotoFile.getBitmap(mBitmapLoadingPhotoInfo);
           break;
-          case Preview:
-            mCamera.setPreviewStarted(!mCamera.isPreviewStarted());
-            break;
-          case TakePhotos:
-            mCamera.takePicture();
-            break;
+        }
+        if (mAgeBitmap == null)
+          return;
+        int targetAge = mAgePhotoInfo.getCurrentAgeState() + 1;
+        if (targetAge == PhotoInfo.AGE_STATE_MAX) {
+          mAgePhotoInfo = null;
+          mAgeBitmap = null;
+          return;
+        }
+
+        // Age the photo
+        mAgePhotoInfo = mutableCopyOf(mAgePhotoInfo);
+        mAgePhotoInfo.setTargetAgeState(targetAge);
+        mAgePhotoInfo.freeze();
+
+        PhotoAger ager = new PhotoAger(mAgePhotoInfo, mAgeBitmap);
+        mAgeBitmap = ager.getAgedJPEG();
+        mAgePhotoInfo = ager.getAgedInfo();
+
+        Bitmap bitmap = BitmapFactory.decodeByteArray(mAgeBitmap, 0, mAgeBitmap.length);
+        mImageView.setImageBitmap(bitmap);
+      }
+      break;
+      case PhotoManip: {
+        if (!mPhotoFile.isOpen())
+          return;
+        PhotoInfo photoInfo = getNextPhotoFromFile();
+        if (photoInfo != null) {
+          mBitmapLoadingPhotoInfo = photoInfo;
+          mPhotoFile.getBitmap(mBitmapLoadingPhotoInfo);
         }
       }
-    });
+      break;
+      case Preview:
+        mCamera.setPreviewStarted(!mCamera.isPreviewStarted());
+        break;
+      case TakePhotos:
+        mCamera.takePicture();
+        break;
+    }
   }
 
   @Override
@@ -293,4 +320,6 @@ public class MainActivity extends Activity {
   private Handler mUIThreadHandler;
   private PhotoFile mPhotoFile;
   private PhotoInfo mBitmapLoadingPhotoInfo;
+  private PhotoInfo mAgePhotoInfo;
+  private byte[] mAgeBitmap;
 }

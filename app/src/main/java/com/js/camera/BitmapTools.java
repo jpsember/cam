@@ -6,8 +6,9 @@ import android.graphics.Matrix;
 
 import com.js.basic.IPoint;
 import com.js.basic.MyMath;
-import com.js.basic.Point;
 import com.js.basic.Rect;
+
+import static com.js.basic.Tools.*;
 
 public class BitmapTools {
 
@@ -81,11 +82,15 @@ public class BitmapTools {
   /**
    * Scale bitmap, if necessary, to fit a target rectangle, without changing aspect ratio
    */
-  public static Bitmap scaleBitmapToFit(Bitmap bitmap, IPoint size) {
-    Rect targetRect = new Rect(0, 0, size.x, size.y);
-    Rect originalRect = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
-    Matrix matrix = MyMath.calcRectFitRectTransform(originalRect, targetRect);
-    return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+  public static Bitmap scaleBitmapToFit(Bitmap bitmap, IPoint size, boolean preserveAspectRatio) {
+    if (!preserveAspectRatio) {
+      return Bitmap.createScaledBitmap(bitmap, size.x, size.y, true);
+    } else {
+      Rect targetRect = new Rect(0, 0, size.x, size.y);
+      Rect originalRect = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
+      Matrix matrix = MyMath.calcRectFitRectTransform(originalRect, targetRect);
+      return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+    }
   }
 
   public static int getOrientation(Bitmap bitmap) {
@@ -103,6 +108,8 @@ public class BitmapTools {
 
     int width = bitmap.getWidth();
     int height = bitmap.getHeight();
+    if ((width % 2) != 0 || (height % 2) != 0)
+      throw new IllegalArgumentException("Dimensions must be multiple of 2");
 
     int[] argb = new int[width * height];
 
