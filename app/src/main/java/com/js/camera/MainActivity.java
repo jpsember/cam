@@ -237,34 +237,11 @@ public class MainActivity extends Activity implements OnClickListener {
       case PhotoAger: {
         if (!mPhotoFile.isOpen())
           return;
-        if (mAgePhotoInfo == null) {
-          PhotoInfo photoInfo = getNextPhotoFromFile();
-          ASSERT(photoInfo != null);
-          mAgePhotoInfo = photoInfo;
-          mBitmapLoadingPhotoInfo = photoInfo;
-          mPhotoFile.getBitmap(mBitmapLoadingPhotoInfo);
-          break;
-        }
-        if (mAgeBitmap == null)
-          return;
-        int targetAge = mAgePhotoInfo.getCurrentAgeState() + 1;
-        if (targetAge == PhotoInfo.AGE_STATE_MAX) {
-          mAgePhotoInfo = null;
-          mAgeBitmap = null;
-          return;
-        }
-
-        // Age the photo
-        mAgePhotoInfo = mutableCopyOf(mAgePhotoInfo);
-        mAgePhotoInfo.setTargetAgeState(targetAge);
-        mAgePhotoInfo.freeze();
-
-        PhotoAger ager = new PhotoAger(mAgePhotoInfo, mAgeBitmap);
-        mAgeBitmap = ager.getAgedJPEG();
-        mAgePhotoInfo = ager.getAgedInfo();
-
-        Bitmap bitmap = BitmapFactory.decodeByteArray(mAgeBitmap, 0, mAgeBitmap.length);
-        mImageView.setImageBitmap(bitmap);
+        PhotoInfo photoInfo = getNextPhotoFromFile();
+        ASSERT(photoInfo != null);
+        mAgePhotoInfo = photoInfo;
+        mBitmapLoadingPhotoInfo = photoInfo;
+        mPhotoFile.getBitmap(mBitmapLoadingPhotoInfo);
       }
       break;
       case PhotoManip: {
@@ -304,7 +281,42 @@ public class MainActivity extends Activity implements OnClickListener {
     mImageView = new ImageView(this);
     mImageView.setBackgroundColor(UITools.debugColor());
     mImageView.setImageResource(R.drawable.ic_launcher);
+    mImageView.setOnClickListener(new OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        processImageViewClick();
+      }
+    });
     return mImageView;
+  }
+
+  private void processImageViewClick() {
+    if (!mPhotoFile.isOpen())
+      return;
+
+    switch (DEMO) {
+      case PhotoAger:
+        if (mAgeBitmap == null)
+          return;
+        int targetAge = mAgePhotoInfo.getCurrentAgeState() + 1;
+        if (targetAge == PhotoInfo.AGE_STATE_MAX) {
+          mAgePhotoInfo = null;
+          mAgeBitmap = null;
+          return;
+        }
+        // Age the photo
+        mAgePhotoInfo = mutableCopyOf(mAgePhotoInfo);
+        mAgePhotoInfo.setTargetAgeState(targetAge);
+        mAgePhotoInfo.freeze();
+
+        PhotoAger ager = new PhotoAger(mAgePhotoInfo, mAgeBitmap);
+        mAgeBitmap = ager.getAgedJPEG();
+        mAgePhotoInfo = ager.getAgedInfo();
+
+        Bitmap bitmap = BitmapFactory.decodeByteArray(mAgeBitmap, 0, mAgeBitmap.length);
+        mImageView.setImageBitmap(bitmap);
+        break;
+    }
   }
 
   private Bitmap constructBitmapFromJPEG(byte[] jpeg, int rotationToApply) {

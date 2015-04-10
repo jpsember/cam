@@ -42,6 +42,17 @@ public class PhotoManipulator {
   private void constructManipulatedBitmap() {
     constructCanvas();
 
+    warning("Disabled vignette");
+    if (false)
+      applyVignette();
+
+    // Throw out unneeded resources
+    mOriginalBitmap = null;
+    mCanvas = null;
+    mPhotoFile = null;
+  }
+
+  private void applyVignette() {
     Paint paint = new Paint();
     paint.setAlpha(128);
     // Vignettes are in landscape mode; if necessary, rotate to portrait
@@ -69,10 +80,6 @@ public class PhotoManipulator {
     }
     mCanvas.drawBitmap(vignetteBitmap, matrix, paint);
 
-    // Throw out unneeded resources
-    mOriginalBitmap = null;
-    mCanvas = null;
-    mPhotoFile = null;
   }
 
   private void constructCanvas() {

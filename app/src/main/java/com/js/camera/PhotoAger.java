@@ -48,13 +48,18 @@ public class PhotoAger {
   }
 
   private float calcColorScaleForAge(int ageState) {
+    // Don't bleed color every frame
+    ageState &= ~0x3;
+
     float scale = (1.0f * (PhotoInfo.AGE_STATE_MAX - 1 - ageState) + (0f * ageState)) / (PhotoInfo.AGE_STATE_MAX - 1);
+
+    // Have the color bleed out faster at the end
+    scale = 1.0f - (1 - scale) * (1 - scale);
     return scale;
   }
 
   private void constructAgedPhoto() {
     mAgedPhotoInfo = mPhotoInfo;
-    pr("constructAgedPhoto: " + mAgedPhotoInfo);
 
     while (mAgedPhotoInfo.getTargetAgeState() > mAgedPhotoInfo.getCurrentAgeState()) {
       Bitmap bitmap = BitmapFactory.decodeByteArray(mCurrentJPEG, 0, mCurrentJPEG.length);
@@ -65,7 +70,6 @@ public class PhotoAger {
       int newAge = mAgedPhotoInfo.getCurrentAgeState() + 1;
       PhotoInfo newInfo = mutableCopyOf(mAgedPhotoInfo);
       newInfo.setCurrentAgeState(newAge);
-      pr(" newInfo: " + newInfo);
 
       // Scale bitmap to new size
       IPoint newSize = calcSizeForAge(newAge);
