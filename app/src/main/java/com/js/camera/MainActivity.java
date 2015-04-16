@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.util.List;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -44,8 +45,10 @@ public class MainActivity extends Activity implements OnClickListener {
     doNothingAndroid();
 
     super.onCreate(savedInstanceState);
-    requestWindowFeature(Window.FEATURE_NO_TITLE);
-    getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+    if (false) {
+      requestWindowFeature(Window.FEATURE_NO_TITLE);
+      getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+    }
 
     setContentView(buildContentView());
     mUIThreadHandler = new Handler(Looper.getMainLooper());
@@ -231,6 +234,14 @@ public class MainActivity extends Activity implements OnClickListener {
   public void onClick(View arg0) {
     if (!mCamera.isOpen())
       return;
+
+    if (true) {
+      // Test album activity 
+      Intent intent = new Intent(this, AlbumActivity.class);
+      startActivity(intent);
+      return;
+    }
+
     switch (DEMO) {
       case PhotoAger: {
         if (!mPhotoFile.isOpen())

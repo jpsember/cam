@@ -1126,6 +1126,9 @@ public final class Tools {
    * linefeeds (to effectively clear the console), and the time of day
    */
   public static void startApp(Object app) {
+    if (sActivityStarted)
+      return;
+    sActivityStarted = true;
     AndroidTools.prepareSystemOut();
     Calendar cal = Calendar.getInstance();
     java.text.SimpleDateFormat simpleDateFormat = new java.text.SimpleDateFormat(
@@ -1138,6 +1141,7 @@ public final class Tools {
         + " ----- " + strTime + " -------------\n\n\n");
   }
 
+  private static boolean sActivityStarted;
   private static long sTimeStampPreviousTime;
   private static long sTimeStampBaseTime;
   private static final Set<String> sWarningStrings = new HashSet();
