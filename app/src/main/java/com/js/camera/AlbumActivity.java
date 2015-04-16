@@ -51,7 +51,7 @@ public class AlbumActivity extends Activity {
     // Handle presses on the action bar items
     switch (item.getItemId()) {
       case R.id.action_camera: {
-        Intent intent = new Intent(this, MainActivity.class);
+        Intent intent = new Intent(this, CameraActivity.class);
         startActivityForResult(intent, 0);
       }
       return true;

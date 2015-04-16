@@ -18,7 +18,7 @@
 
         <activity
             android:label="@string/app_name"
-            android:name="com.js.camera.MainActivity"
+            android:name="com.js.camera.CameraActivity"
             android:exported="true">
         </activity>
 

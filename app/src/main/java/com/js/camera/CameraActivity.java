@@ -28,7 +28,7 @@ import com.js.camera.camera.R;
 import static com.js.basic.Tools.*;
 import static com.js.android.AndroidTools.*;
 
-public class MainActivity extends Activity implements OnClickListener {
+public class CameraActivity extends Activity implements OnClickListener {
 
   private enum Demo {
     Preview, TakePhotos, PhotoManip, PhotoAger
