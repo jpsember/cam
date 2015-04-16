@@ -236,7 +236,7 @@ public class MainActivity extends Activity implements OnClickListener {
       return;
 
     if (true) {
-      // Test album activity 
+      // Test album activity
       Intent intent = new Intent(this, AlbumActivity.class);
       startActivity(intent);
       return;
