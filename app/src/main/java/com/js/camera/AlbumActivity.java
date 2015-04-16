@@ -16,7 +16,6 @@ import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-import com.js.android.AppPreferences;
 import com.js.camera.camera.R;
 
 import static com.js.basic.Tools.*;
@@ -27,9 +26,8 @@ public class AlbumActivity extends Activity {
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
-    startApp(this);
-    AppPreferences.prepare(this);
     doNothingAndroid();
+    AppState.prepare(this);
 
     super.onCreate(savedInstanceState);
 

@@ -20,7 +20,6 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 
-import com.js.android.AppPreferences;
 import com.js.android.UITools;
 import com.js.basic.IPoint;
 import com.js.camera.camera.R;
@@ -38,9 +37,8 @@ public class CameraActivity extends Activity implements OnClickListener {
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
-    startApp(this);
-    AppPreferences.prepare(this);
     doNothingAndroid();
+    AppState.prepare(this);
 
     super.onCreate(savedInstanceState);
     requestWindowFeature(Window.FEATURE_NO_TITLE);
