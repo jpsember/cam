@@ -26,7 +26,7 @@ public class BitmapTools {
    * @return argb data
    */
   public static int[] decodeYUV420SP(int[] argb, byte[] yuv, IPoint size) {
-
+    doNothing();
     int width = size.x;
     int height = size.y;
     int frameSize = width * height;
@@ -140,7 +140,7 @@ public class BitmapTools {
 
         R = (argb[index] & 0xff0000) >> 16;
         G = (argb[index] & 0xff00) >> 8;
-        B = (argb[index] & 0xff) >> 0;
+        B = (argb[index] & 0xff);
 
         Y = ((66 * R + 129 * G + 25 * B + 128) >> 8) + 16;
         U = ((-38 * R - 74 * G + 112 * B + 128) >> 8) + 128;

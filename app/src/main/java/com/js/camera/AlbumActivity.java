@@ -1,9 +1,11 @@
 package com.js.camera;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 
 import com.js.android.AppPreferences;
@@ -42,6 +44,20 @@ public class AlbumActivity extends Activity {
     MenuInflater inflater = getMenuInflater();
     inflater.inflate(R.menu.album_activity_actions, menu);
     return super.onCreateOptionsMenu(menu);
+  }
+
+  @Override
+  public boolean onOptionsItemSelected(MenuItem item) {
+    // Handle presses on the action bar items
+    switch (item.getItemId()) {
+      case R.id.action_camera: {
+        Intent intent = new Intent(this, MainActivity.class);
+        startActivityForResult(intent, 0);
+      }
+      return true;
+      default:
+        return super.onOptionsItemSelected(item);
+    }
   }
 
   private View buildContentView() {
