@@ -3,7 +3,10 @@ package com.js.camera;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -19,7 +22,9 @@ import android.widget.Toast;
 import com.js.camera.camera.R;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 
@@ -35,10 +40,11 @@ public class AlbumActivity extends Activity implements Observer {
     setTrace(true);
 
     mPhotoFile = AppState.photoFile();
-
+    HandlerThread thread = new HandlerThread("AlbumActivity background thread");
+    thread.start();
+    mBackgroundThreadHandler = new Handler(thread.getLooper());
     super.onCreate(savedInstanceState);
     setContentView(buildContentView());
-
   }
 
   @Override
@@ -62,6 +68,7 @@ public class AlbumActivity extends Activity implements Observer {
     trace("onPause");
     mPhotoFile.deleteObserver(this);
     mPhotos.clear();
+    mThumbnailMap.clear();
     super.onPause();
   }
 
@@ -170,9 +177,21 @@ public class AlbumActivity extends Activity implements Observer {
       } else {
         imageView = (ImageView) convertView;
       }
-      PhotoInfo photo = getPhoto(position);
-      unimp("retrieve photo bitmap asynchronously for " + photo);
-      imageView.setImageResource(getThumbId(position));
+      final PhotoInfo photo = getPhoto(position);
+
+      // If thumbnail exists for this photo, use it;
+      // otherwise, build it asynchronously and refresh this item when it's available
+      Bitmap bitmap = getThumbnailForPhoto(photo);
+      if (bitmap != null) {
+        imageView.setImageBitmap(bitmap);
+      } else {
+        mBackgroundThreadHandler.post(new Runnable() {
+          @Override
+          public void run() {
+            unimp("load thumbnail for " + photo);
+          }
+        });
+      }
       return imageView;
     }
 
@@ -201,8 +220,15 @@ public class AlbumActivity extends Activity implements Observer {
     }
   }
 
+  private Bitmap getThumbnailForPhoto(PhotoInfo photo) {
+    Bitmap bitmap = mThumbnailMap.get(photo.getId());
+    return bitmap;
+  }
+
   private boolean mTrace;
   private BaseAdapter mAdapter;
   private PhotoFile mPhotoFile;
   private List<PhotoInfo> mPhotos = new ArrayList();
+  private Map<Integer, Bitmap> mThumbnailMap = new HashMap();
+  private Handler mBackgroundThreadHandler;
 }
