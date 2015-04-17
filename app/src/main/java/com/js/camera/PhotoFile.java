@@ -53,7 +53,7 @@ public class PhotoFile {
     mContext = context;
     mListener = listener;
     mState = State.Start;
-//    setTrace(true);
+    setTrace(true);
     doNothing();
     doNothingAndroid();
   }

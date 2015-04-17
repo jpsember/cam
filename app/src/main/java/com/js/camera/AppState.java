@@ -1,6 +1,7 @@
 package com.js.camera;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 
 import com.js.android.AppPreferences;
 
@@ -27,8 +28,41 @@ public class AppState {
 
   public static PhotoFile photoFile() {
     assertPrepared();
+    if (sPhotoFile == null)
+      constructPhotoFile();
     unimp("construct photo file");
     return sPhotoFile;
+  }
+
+  private static Context context() {
+    assertPrepared();
+    return sContext;
+  }
+
+  private static void constructPhotoFile() {
+    sPhotoFile = new PhotoFile(context(), new PhotoFile.Listener() {
+      @Override
+      public void stateChanged() {
+        if (!sPhotoFile.isOpen())
+          return;
+        pr("PhotoFile state changed to " + sPhotoFile.state());
+      }
+
+      @Override
+      public void photoCreated(PhotoInfo photoInfo) {
+        pr("Created " + photoInfo);
+      }
+
+      @Override
+      public void bitmapConstructed(PhotoInfo photoInfo, Bitmap bitmap) {
+        pr("BitmapConstructed: " + photoInfo);
+        if (bitmap == null) {
+          warning("no bitmap for " + photoInfo);
+          return;
+        }
+      }
+    });
+    sPhotoFile.open();
   }
 
   private static PhotoFile sPhotoFile;

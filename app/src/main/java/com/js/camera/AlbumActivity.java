@@ -18,6 +18,9 @@ import android.widget.Toast;
 
 import com.js.camera.camera.R;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static com.js.basic.Tools.*;
 
 import static com.js.android.AndroidTools.doNothingAndroid;
@@ -30,13 +33,13 @@ public class AlbumActivity extends Activity {
     AppState.prepare(this);
 
     super.onCreate(savedInstanceState);
-
     setContentView(buildContentView());
   }
 
   @Override
   protected void onResume() {
     super.onResume();
+    mPhotoFile = AppState.photoFile();
   }
 
   @Override
@@ -94,7 +97,7 @@ public class AlbumActivity extends Activity {
   }
 
 
-  private static class ImageAdapter extends BaseAdapter {
+  private class ImageAdapter extends BaseAdapter {
     private Context mContext;
 
     public ImageAdapter(Context c) {
@@ -102,7 +105,8 @@ public class AlbumActivity extends Activity {
     }
 
     public int getCount() {
-      return 150;
+      unimp("read PhotoFile when we are certain it's open");
+      return 0;
     }
 
     public Object getItem(int position) {
@@ -125,7 +129,6 @@ public class AlbumActivity extends Activity {
       } else {
         imageView = (ImageView) convertView;
       }
-
       imageView.setImageResource(getThumbId(position));
       return imageView;
     }
@@ -138,4 +141,6 @@ public class AlbumActivity extends Activity {
         R.drawable.ic_launcher, R.drawable.round_button, R.drawable.ic_launcher,
     };
   }
+
+  private PhotoFile mPhotoFile;
 }
