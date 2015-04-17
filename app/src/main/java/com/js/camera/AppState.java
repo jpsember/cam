@@ -2,6 +2,7 @@ package com.js.camera;
 
 import android.content.Context;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Looper;
 
 import com.js.android.AppPreferences;
@@ -48,6 +49,13 @@ public class AppState {
   private static void constructPhotoFile() {
     sPhotoFile = new PhotoFile(context());
     sPhotoFile.open();
+  }
+
+  public static Handler buildBackgroundHandler(String name) {
+    HandlerThread handlerThread = new HandlerThread(name + " background handler thread");
+    handlerThread.start();
+    Handler handler = new Handler(handlerThread.getLooper());
+    return handler;
   }
 
   private static PhotoFile sPhotoFile;

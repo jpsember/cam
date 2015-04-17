@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -40,9 +39,7 @@ public class AlbumActivity extends Activity implements Observer {
     setTrace(true);
 
     mPhotoFile = AppState.photoFile();
-    HandlerThread thread = new HandlerThread("AlbumActivity background thread");
-    thread.start();
-    mBackgroundThreadHandler = new Handler(thread.getLooper());
+    mBackgroundThreadHandler = AppState.buildBackgroundHandler("AlbumActivity");
     super.onCreate(savedInstanceState);
     setContentView(buildContentView());
   }

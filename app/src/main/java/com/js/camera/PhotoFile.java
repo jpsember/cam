@@ -5,8 +5,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Environment;
 import android.os.Handler;
-import android.os.HandlerThread;
-import android.os.Looper;
 
 import com.js.basic.Files;
 import com.js.basic.JSONTools;
@@ -24,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Observable;
-import java.util.Observer;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -72,7 +69,7 @@ public class PhotoFile extends Observable {
 
     trace("open()");
 
-    openBackgroundHandler();
+    mBackgroundThreadHandler = AppState.buildBackgroundHandler("PhotoFile");
 
     setState(State.Opening);
 
@@ -194,12 +191,6 @@ public class PhotoFile extends Observable {
       trace("Changing state from " + mState + " to " + state);
       mState = state;
     }
-  }
-
-  private void openBackgroundHandler() {
-    HandlerThread backgroundThreadHandler = new HandlerThread("PhotoFile background thread");
-    backgroundThreadHandler.start();
-    mBackgroundThreadHandler = new Handler(backgroundThreadHandler.getLooper());
   }
 
   // --------------- Methods called only within background thread
