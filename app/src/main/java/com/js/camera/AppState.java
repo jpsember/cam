@@ -1,12 +1,8 @@
 package com.js.camera;
 
 import android.content.Context;
-import android.graphics.Bitmap;
 
 import com.js.android.AppPreferences;
-
-import java.util.Observable;
-import java.util.Observer;
 
 import static com.js.basic.Tools.*;
 
@@ -33,7 +29,6 @@ public class AppState {
     assertPrepared();
     if (sPhotoFile == null)
       constructPhotoFile();
-    unimp("construct photo file");
     return sPhotoFile;
   }
 
@@ -44,12 +39,6 @@ public class AppState {
 
   private static void constructPhotoFile() {
     sPhotoFile = new PhotoFile(context());
-    sPhotoFile.addObserver(new Observer() {
-      @Override
-      public void update(Observable observable, Object data) {
-        warning("ignoring event with " + nameOf(data));
-      }
-    });
     sPhotoFile.open();
   }
 

@@ -20,30 +20,46 @@ import com.js.camera.camera.R;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Observable;
+import java.util.Observer;
 
 import static com.js.basic.Tools.*;
 
 import static com.js.android.AndroidTools.doNothingAndroid;
 
-public class AlbumActivity extends Activity {
+public class AlbumActivity extends Activity implements Observer {
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
     doNothingAndroid();
     AppState.prepare(this);
 
+    mPhotoFile = AppState.photoFile();
+
     super.onCreate(savedInstanceState);
     setContentView(buildContentView());
+
   }
 
   @Override
   protected void onResume() {
     super.onResume();
-    mPhotoFile = AppState.photoFile();
+    mPhotoFile.addObserver(this);
+    rebuildAlbumIfPhotosAvailable();
+  }
+
+  private void rebuildAlbumIfPhotosAvailable() {
+    if (!mPhotoFile.isOpen())
+      return;
+    mPhotos.clear();
+    mPhotos.addAll(mPhotoFile.getPhotos(0, Integer.MAX_VALUE / 10));
+    mAdapter.notifyDataSetChanged();
   }
 
   @Override
   protected void onPause() {
+    mPhotoFile.deleteObserver(this);
+    mPhotos.clear();
     super.onPause();
   }
 
@@ -84,7 +100,8 @@ public class AlbumActivity extends Activity {
     v.setStretchMode(GridView.STRETCH_COLUMN_WIDTH);
     v.setGravity(Gravity.CENTER);
 
-    v.setAdapter(new ImageAdapter(this));
+    mAdapter = new ImageAdapter(this);
+    v.setAdapter(mAdapter);
 
     v.setOnItemClickListener(new AdapterView.OnItemClickListener() {
       public void onItemClick(AdapterView<?> parent, View v,
@@ -96,6 +113,18 @@ public class AlbumActivity extends Activity {
     return v;
   }
 
+  // Observer interface
+
+  @Override
+  public void update(Observable observable, Object data) {
+    Object[] params = (Object[]) data;
+    switch ((PhotoFile.Event) params[0]) {
+      case StateChanged:
+        rebuildAlbumIfPhotosAvailable();
+        break;
+    }
+  }
+
 
   private class ImageAdapter extends BaseAdapter {
     private Context mContext;
@@ -105,8 +134,7 @@ public class AlbumActivity extends Activity {
     }
 
     public int getCount() {
-      unimp("read PhotoFile when we are certain it's open");
-      return 0;
+      return mPhotos.size();
     }
 
     public Object getItem(int position) {
@@ -142,5 +170,7 @@ public class AlbumActivity extends Activity {
     };
   }
 
+  private BaseAdapter mAdapter;
   private PhotoFile mPhotoFile;
+  private List<PhotoInfo> mPhotos = new ArrayList();
 }
