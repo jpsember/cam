@@ -26,7 +26,7 @@ import android.view.SurfaceHolder;
  */
 public class MyCamera {
 
-  private static final boolean SIMULATED_DELAYS = false;
+  private static final boolean SIMULATED_DELAYS = true;
 
   public interface Listener {
     /**

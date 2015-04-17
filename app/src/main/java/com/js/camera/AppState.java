@@ -5,6 +5,9 @@ import android.graphics.Bitmap;
 
 import com.js.android.AppPreferences;
 
+import java.util.Observable;
+import java.util.Observer;
+
 import static com.js.basic.Tools.*;
 
 /**
@@ -40,26 +43,11 @@ public class AppState {
   }
 
   private static void constructPhotoFile() {
-    sPhotoFile = new PhotoFile(context(), new PhotoFile.Listener() {
+    sPhotoFile = new PhotoFile(context());
+    sPhotoFile.addObserver(new Observer() {
       @Override
-      public void stateChanged() {
-        if (!sPhotoFile.isOpen())
-          return;
-        pr("PhotoFile state changed to " + sPhotoFile.state());
-      }
-
-      @Override
-      public void photoCreated(PhotoInfo photoInfo) {
-        pr("Created " + photoInfo);
-      }
-
-      @Override
-      public void bitmapConstructed(PhotoInfo photoInfo, Bitmap bitmap) {
-        pr("BitmapConstructed: " + photoInfo);
-        if (bitmap == null) {
-          warning("no bitmap for " + photoInfo);
-          return;
-        }
+      public void update(Observable observable, Object data) {
+        warning("ignoring event with " + nameOf(data));
       }
     });
     sPhotoFile.open();

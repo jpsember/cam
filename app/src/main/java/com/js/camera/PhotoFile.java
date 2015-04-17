@@ -23,6 +23,8 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -32,26 +34,23 @@ import static com.js.basic.Tools.*;
 /**
  * Organizes the photos stored on user device, including background processing
  */
-public class PhotoFile {
+public class PhotoFile extends Observable {
 
   private static final boolean SIMULATED_DELAYS = false;
   private static final boolean WITH_ASSERTIONS = true;
   // Start with a fresh photo directory on each run?
   private static final boolean DELETE_ROOT_DIRECTORY = false;
 
-  public interface Listener {
-    void stateChanged();
-
-    void photoCreated(PhotoInfo photoInfo);
-
-    void bitmapConstructed(PhotoInfo photoInfo, Bitmap bitmap);
+  public static enum Event {
+    StateChanged,
+    PhotoCreated,
+    BitmapConstructed,
   }
 
-  public PhotoFile(Context context, Listener listener) {
-    if (listener == null || context == null)
+  public PhotoFile(Context context) {
+    if (context == null)
       throw new IllegalArgumentException();
     mContext = context;
-    mListener = listener;
     mState = State.Start;
     setTrace(true);
     doNothing();
@@ -125,7 +124,7 @@ public class PhotoFile {
           final PhotoInfo photoInfo = backgroundThreadCreatePhoto(jpegData, rotationToApply);
           mUIThreadHandler.post(new Runnable() {
             public void run() {
-              mListener.photoCreated(photoInfo);
+              notifyEventObservers(Event.PhotoCreated, photoInfo);
             }
           });
         } catch (IOException e) {
@@ -182,7 +181,7 @@ public class PhotoFile {
     setState(State.Failed);
     mFailureMessage = message;
     trace("Failed with message " + message);
-    mListener.stateChanged();
+    notifyEventObservers(Event.StateChanged);
   }
 
   private void assertUIThread() {
@@ -243,7 +242,7 @@ public class PhotoFile {
     mUIThreadHandler.post(new Runnable() {
       public void run() {
         setState(State.Open);
-        mListener.stateChanged();
+        notifyEventObservers(Event.StateChanged);
       }
     });
   }
@@ -468,7 +467,7 @@ public class PhotoFile {
 
     mUIThreadHandler.post(new Runnable() {
       public void run() {
-        mListener.bitmapConstructed(photoInfo, finalBitmap);
+        notifyEventObservers(Event.BitmapConstructed, photoInfo, finalBitmap);
       }
     });
   }
@@ -488,11 +487,21 @@ public class PhotoFile {
     return mContext;
   }
 
+  /**
+   * Notify registered observers of an event
+   *
+   * @param args the first element must be an Event, the rest are dependent upon the type of Event
+   */
+  private void notifyEventObservers(Object... args) {
+    assertUIThread();
+    setChanged();
+    notifyObservers(args);
+  }
+
   private boolean mTrace;
   private State mState;
   private String mFailureMessage;
   private final Context mContext;
-  private final Listener mListener;
   private Handler mUIThreadHandler;
   private Handler mBackgroundThreadHandler;
   // This is a constant once the file has been created, so thread doesn't matter

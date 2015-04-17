@@ -1,6 +1,8 @@
 package com.js.camera;
 
 import java.util.List;
+import java.util.Observable;
+import java.util.Observer;
 
 import android.app.Activity;
 import android.graphics.Bitmap;
@@ -118,32 +120,31 @@ public class CameraActivity extends Activity implements OnClickListener {
   }
 
   private void resumePhotoFile() {
-    mPhotoFile = new PhotoFile(this, new PhotoFile.Listener() {
+    mPhotoFile = new PhotoFile(this);
+    mPhotoFile.addObserver(new Observer() {
       @Override
-      public void stateChanged() {
-        if (!mPhotoFile.isOpen())
-          return;
-        pr("PhotoFile state changed to " + mPhotoFile.state());
-      }
+      public void update(Observable observable, Object data) {
+        Object[] args = (Object[]) data;
+        PhotoFile.Event event = (PhotoFile.Event) args[0];
 
-      @Override
-      public void photoCreated(PhotoInfo photoInfo) {
-        pr("Created " + photoInfo);
-      }
-
-      @Override
-      public void bitmapConstructed(PhotoInfo photoInfo, Bitmap bitmap) {
-        if (bitmap == null) {
-          warning("no bitmap for " + photoInfo);
-          return;
-        }
-        if (photoInfo.getId() != mBitmapLoadingPhotoInfo.getId()) {
-          warning("bitmap is stale:" + photoInfo);
-          return;
-        }
-        mImageView.setImageBitmap(bitmap);
-        if (DEMO == Demo.PhotoAger) {
-          mAgeBitmap = BitmapTools.encodeJPEG(bitmap, 80);
+        switch (event) {
+          case BitmapConstructed: {
+            Bitmap bitmap = (Bitmap) args[1];
+            PhotoInfo photoInfo = (PhotoInfo) args[2];
+            if (bitmap == null) {
+              warning("no bitmap for " + photoInfo);
+              return;
+            }
+            if (photoInfo.getId() != mBitmapLoadingPhotoInfo.getId()) {
+              warning("bitmap is stale:" + photoInfo);
+              return;
+            }
+            mImageView.setImageBitmap(bitmap);
+            if (DEMO == Demo.PhotoAger) {
+              mAgeBitmap = BitmapTools.encodeJPEG(bitmap, 80);
+            }
+          }
+          break;
         }
       }
     });
