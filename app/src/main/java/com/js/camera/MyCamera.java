@@ -55,7 +55,6 @@ public class MyCamera {
   }
 
   private void openBackgroundHandler() {
-    mUIThreadHandler = new Handler(Looper.getMainLooper());
     HandlerThread backgroundThreadHandler = new HandlerThread("MyCamera background thread");
     backgroundThreadHandler.start();
     mBackgroundThreadHandler = new Handler(backgroundThreadHandler.getLooper());
@@ -96,7 +95,7 @@ public class MyCamera {
     mBackgroundThreadHandler.post(new Runnable() {
       public void run() {
         mCamera = backgroundThreadOpenCamera();
-        mUIThreadHandler.post(new Runnable() {
+        AppState.postUIEvent(new Runnable() {
           public void run() {
             processCameraReceivedFromBackgroundThread();
           }
@@ -242,7 +241,7 @@ public class MyCamera {
   private Camera.PictureCallback mTakePictureJPEGCallback = new Camera.PictureCallback() {
 
     public void onPictureTaken(final byte[] data, Camera camera) {
-      mUIThreadHandler.post(new Runnable() {
+      AppState.postUIEvent(new Runnable() {
         public void run() {
           try {
             if (data != null)
@@ -395,7 +394,6 @@ public class MyCamera {
   private Listener mListener;
   private boolean mPreviewStarted;
   private Camera.PreviewCallback mPreviewCallback;
-  private Handler mUIThreadHandler;
   private Handler mBackgroundThreadHandler;
   private Properties mProperties;
 

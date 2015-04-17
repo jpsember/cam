@@ -12,8 +12,6 @@ import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.hardware.Camera;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.Window;
@@ -48,7 +46,6 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
     setContentView(buildContentView());
-    mUIThreadHandler = new Handler(Looper.getMainLooper());
   }
 
   /**
@@ -86,7 +83,7 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
         }
 
         final Bitmap finalBitmap = bitmap;
-        mUIThreadHandler.post(new Runnable() {
+        AppState.postUIEvent(new Runnable() {
           public void run() {
             mImageView.setImageBitmap(finalBitmap);
           }
@@ -328,7 +325,6 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
   private CameraPreview mPreview;
   private FrameLayout mCameraViewContainer;
   private ImageView mImageView;
-  private Handler mUIThreadHandler;
   private PhotoFile mPhotoFile;
   private PhotoInfo mBitmapLoadingPhotoInfo;
   private PhotoInfo mAgePhotoInfo;

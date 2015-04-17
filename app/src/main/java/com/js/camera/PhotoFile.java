@@ -122,7 +122,7 @@ public class PhotoFile extends Observable {
       public void run() {
         try {
           final PhotoInfo photoInfo = backgroundThreadCreatePhoto(jpegData, rotationToApply);
-          mUIThreadHandler.post(new Runnable() {
+          AppState.postUIEvent(new Runnable() {
             public void run() {
               notifyEventObservers(Event.PhotoCreated, photoInfo);
             }
@@ -197,7 +197,6 @@ public class PhotoFile extends Observable {
   }
 
   private void openBackgroundHandler() {
-    mUIThreadHandler = new Handler(Looper.getMainLooper());
     HandlerThread backgroundThreadHandler = new HandlerThread("PhotoFile background thread");
     backgroundThreadHandler.start();
     mBackgroundThreadHandler = new Handler(backgroundThreadHandler.getLooper());
@@ -238,7 +237,7 @@ public class PhotoFile extends Observable {
       pr("photoFile waking up...");
     }
 
-    mUIThreadHandler.post(new Runnable() {
+    AppState.postUIEvent(new Runnable() {
       public void run() {
         setState(State.Open);
         notifyEventObservers(Event.StateChanged);
@@ -257,7 +256,7 @@ public class PhotoFile extends Observable {
       bgndFail("closing file", e);
     }
 
-    mUIThreadHandler.post(new Runnable() {
+    AppState.postUIEvent(new Runnable() {
       public void run() {
         setState(State.Closed);
       }
@@ -355,7 +354,7 @@ public class PhotoFile extends Observable {
       failMessage += "; " + d(t);
     final String finalMessage = failMessage;
 
-    mUIThreadHandler.post(new Runnable() {
+    AppState.postUIEvent(new Runnable() {
       public void run() {
         setFailed(finalMessage);
       }
@@ -464,7 +463,7 @@ public class PhotoFile extends Observable {
 
     final Bitmap finalBitmap = m.getManipulatedBitmap();
 
-    mUIThreadHandler.post(new Runnable() {
+    AppState.postUIEvent(new Runnable() {
       public void run() {
         notifyEventObservers(Event.BitmapConstructed, photoInfo, finalBitmap);
       }
@@ -501,7 +500,6 @@ public class PhotoFile extends Observable {
   private State mState;
   private String mFailureMessage;
   private final Context mContext;
-  private Handler mUIThreadHandler;
   private Handler mBackgroundThreadHandler;
   // This is a constant once the file has been created, so thread doesn't matter
   private int mRandomSeed;

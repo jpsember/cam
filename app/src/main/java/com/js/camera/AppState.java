@@ -1,6 +1,8 @@
 package com.js.camera;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 
 import com.js.android.AppPreferences;
 
@@ -18,6 +20,7 @@ public class AppState {
     sContext = context;
     startApp(context);
     AppPreferences.prepare(context);
+    sUIThreadHandler = new Handler(Looper.getMainLooper());
   }
 
   private static void assertPrepared() {
@@ -32,6 +35,11 @@ public class AppState {
     return sPhotoFile;
   }
 
+  public static void postUIEvent(Runnable r) {
+    assertPrepared();
+    sUIThreadHandler.post(r);
+  }
+
   private static Context context() {
     assertPrepared();
     return sContext;
@@ -44,4 +52,6 @@ public class AppState {
 
   private static PhotoFile sPhotoFile;
   private static Context sContext;
+  private static Handler sUIThreadHandler;
+
 }
