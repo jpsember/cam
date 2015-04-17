@@ -125,7 +125,6 @@ public class AlbumActivity extends Activity implements Observer {
     }
   }
 
-
   private class ImageAdapter extends BaseAdapter {
     private Context mContext;
 

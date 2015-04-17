@@ -29,7 +29,7 @@ import com.js.camera.camera.R;
 import static com.js.basic.Tools.*;
 import static com.js.android.AndroidTools.*;
 
-public class CameraActivity extends Activity implements OnClickListener {
+public class CameraActivity extends Activity implements OnClickListener, Observer {
 
   private enum Demo {
     Preview, TakePhotos, PhotoManip, PhotoAger
@@ -41,6 +41,7 @@ public class CameraActivity extends Activity implements OnClickListener {
   public void onCreate(Bundle savedInstanceState) {
     doNothingAndroid();
     AppState.prepare(this);
+    mPhotoFile = AppState.photoFile();
 
     super.onCreate(savedInstanceState);
     requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -120,35 +121,7 @@ public class CameraActivity extends Activity implements OnClickListener {
   }
 
   private void resumePhotoFile() {
-    mPhotoFile = new PhotoFile(this);
-    mPhotoFile.addObserver(new Observer() {
-      @Override
-      public void update(Observable observable, Object data) {
-        Object[] args = (Object[]) data;
-        PhotoFile.Event event = (PhotoFile.Event) args[0];
-
-        switch (event) {
-          case BitmapConstructed: {
-            Bitmap bitmap = (Bitmap) args[1];
-            PhotoInfo photoInfo = (PhotoInfo) args[2];
-            if (bitmap == null) {
-              warning("no bitmap for " + photoInfo);
-              return;
-            }
-            if (photoInfo.getId() != mBitmapLoadingPhotoInfo.getId()) {
-              warning("bitmap is stale:" + photoInfo);
-              return;
-            }
-            mImageView.setImageBitmap(bitmap);
-            if (DEMO == Demo.PhotoAger) {
-              mAgeBitmap = BitmapTools.encodeJPEG(bitmap, 80);
-            }
-          }
-          break;
-        }
-      }
-    });
-    mPhotoFile.open();
+    mPhotoFile.addObserver(this);
   }
 
   private void resumeCamera() {
@@ -185,7 +158,7 @@ public class CameraActivity extends Activity implements OnClickListener {
   }
 
   private void pausePhotoFile() {
-    mPhotoFile.close();
+    mPhotoFile.deleteObserver(this);
   }
 
   private PhotoInfo getNextPhotoFromFile() {
@@ -322,6 +295,33 @@ public class CameraActivity extends Activity implements OnClickListener {
     Bitmap bitmap = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.length);
     bitmap = BitmapTools.rotateBitmap(bitmap, rotationToApply);
     return bitmap;
+  }
+
+  // Observer interface (for PhotoFile)
+  @Override
+  public void update(Observable observable, Object data) {
+    Object[] args = (Object[]) data;
+    PhotoFile.Event event = (PhotoFile.Event) args[0];
+
+    switch (event) {
+      case BitmapConstructed: {
+        PhotoInfo photoInfo = (PhotoInfo) args[1];
+        Bitmap bitmap = (Bitmap) args[2];
+        if (bitmap == null) {
+          warning("no bitmap for " + photoInfo);
+          return;
+        }
+        if (photoInfo.getId() != mBitmapLoadingPhotoInfo.getId()) {
+          warning("bitmap is stale:" + photoInfo);
+          return;
+        }
+        mImageView.setImageBitmap(bitmap);
+        if (DEMO == Demo.PhotoAger) {
+          mAgeBitmap = BitmapTools.encodeJPEG(bitmap, 80);
+        }
+      }
+      break;
+    }
   }
 
   private MyCamera mCamera;
