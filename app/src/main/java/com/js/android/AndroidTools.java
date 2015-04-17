@@ -6,6 +6,7 @@ import java.io.PrintStream;
 import com.js.basic.Files;
 
 import android.content.Context;
+import android.os.Looper;
 import android.widget.Toast;
 
 import static com.js.basic.Tools.*;
@@ -63,6 +64,10 @@ public final class AndroidTools {
    */
   public static void prepareSystemOut() {
     AndroidSystemOutFilter.install();
+  }
+
+  public static boolean isUIThread() {
+    return Thread.currentThread() == Looper.getMainLooper().getThread();
   }
 
   private static class AndroidSystemOutFilter extends PrintStream {

@@ -24,8 +24,7 @@ import java.util.Observable;
 import java.util.Observer;
 
 import static com.js.basic.Tools.*;
-
-import static com.js.android.AndroidTools.doNothingAndroid;
+import static com.js.android.AndroidTools.*;
 
 public class AlbumActivity extends Activity implements Observer {
 
@@ -33,6 +32,7 @@ public class AlbumActivity extends Activity implements Observer {
   public void onCreate(Bundle savedInstanceState) {
     doNothingAndroid();
     AppState.prepare(this);
+    setTrace(true);
 
     mPhotoFile = AppState.photoFile();
 
@@ -43,6 +43,7 @@ public class AlbumActivity extends Activity implements Observer {
 
   @Override
   protected void onResume() {
+    trace("onResume");
     super.onResume();
     mPhotoFile.addObserver(this);
     rebuildAlbumIfPhotosAvailable();
@@ -58,6 +59,7 @@ public class AlbumActivity extends Activity implements Observer {
 
   @Override
   protected void onPause() {
+    trace("onPause");
     mPhotoFile.deleteObserver(this);
     mPhotos.clear();
     super.onPause();
@@ -132,23 +134,35 @@ public class AlbumActivity extends Activity implements Observer {
       mContext = c;
     }
 
+    @Override
     public int getCount() {
       return mPhotos.size();
     }
 
+    @Override
     public Object getItem(int position) {
-      return null;
+      PhotoInfo photo = mPhotos.get(position);
+      trace("getItem position=" + position + " returning " + d(photo));
+      return photo;
     }
 
+    @Override
     public long getItemId(int position) {
-      return 0;
+      return getPhoto(position).getId();
+    }
+
+    private PhotoInfo getPhoto(int position) {
+      return (PhotoInfo) getItem(position);
     }
 
     // create a new ImageView for each item referenced by the Adapter
+    @Override
     public View getView(int position, View convertView, ViewGroup parent) {
+      trace("getView position=" + position);
       ImageView imageView;
       if (convertView == null) {
         // if it's not recycled, initialize some attributes
+        trace("building ImageView");
         imageView = new ImageView(mContext);
         imageView.setLayoutParams(new GridView.LayoutParams(85, 85));
         imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
@@ -156,6 +170,8 @@ public class AlbumActivity extends Activity implements Observer {
       } else {
         imageView = (ImageView) convertView;
       }
+      PhotoInfo photo = getPhoto(position);
+      unimp("retrieve photo bitmap asynchronously for " + photo);
       imageView.setImageResource(getThumbId(position));
       return imageView;
     }
@@ -169,6 +185,23 @@ public class AlbumActivity extends Activity implements Observer {
     };
   }
 
+  public void setTrace(boolean state) {
+    mTrace = state;
+    if (state)
+      warning("Turning tracing on");
+  }
+
+  private void trace(Object msg) {
+    if (mTrace) {
+      String threadMessage = "";
+      if (!isUIThread()) {
+        threadMessage = "(" + nameOf(Thread.currentThread()) + ") ";
+      }
+      pr("--      AlbumActivity " + threadMessage + "--: " + msg);
+    }
+  }
+
+  private boolean mTrace;
   private BaseAdapter mAdapter;
   private PhotoFile mPhotoFile;
   private List<PhotoInfo> mPhotos = new ArrayList();

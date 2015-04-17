@@ -52,7 +52,7 @@ public class PhotoFile extends Observable {
       throw new IllegalArgumentException();
     mContext = context;
     mState = State.Start;
-    setTrace(true);
+//    setTrace(true);
     doNothing();
     doNothingAndroid();
   }
@@ -159,10 +159,6 @@ public class PhotoFile extends Observable {
         constructBitmap(photoInfo);
       }
     });
-  }
-
-  private static boolean isUIThread() {
-    return Thread.currentThread() == Looper.getMainLooper().getThread();
   }
 
   private void trace(Object msg) {
