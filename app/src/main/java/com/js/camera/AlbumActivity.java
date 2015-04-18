@@ -91,10 +91,11 @@ public class AlbumActivity extends Activity implements Observer {
         Intent intent = new Intent(this, CameraActivity.class);
         startActivityForResult(intent, 0);
       }
-      return true;
+      break;
       default:
         return super.onOptionsItemSelected(item);
     }
+    return true;
   }
 
   private View buildContentView() {
@@ -119,10 +120,11 @@ public class AlbumActivity extends Activity implements Observer {
     v.setOnItemClickListener(new AdapterView.OnItemClickListener() {
       public void onItemClick(AdapterView<?> parent, View v,
                               int position, long id) {
-        Toast.makeText(AlbumActivity.this, "" + position,
-            Toast.LENGTH_SHORT).show();
+        trace("showing photo id " + id);
+        startActivityForResult(ViewPhotoActivity.buildIntentForPhoto(AlbumActivity.this, (int) id), 0);
       }
     });
+
     return v;
   }
 
@@ -151,8 +153,9 @@ public class AlbumActivity extends Activity implements Observer {
           @Override
           public void run() {
             PhotoFile.simulateDelay(250);
-            // Have background thread construct thumbnail from this (full size) bitmap
-            final Bitmap thumbnailBitmap = constructThumbnailFor(bitmap);
+            if (AlbumActivity.this.)
+              // Have background thread construct thumbnail from this (full size) bitmap
+              final Bitmap thumbnailBitmap = constructThumbnailFor(bitmap);
             trace("constructed thumbnail; " + BitmapTools.size(thumbnailBitmap));
             AppState.postUIEvent(new Runnable() {
               @Override
