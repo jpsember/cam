@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.Matrix;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.Gravity;
@@ -18,6 +20,8 @@ import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import com.js.basic.IPoint;
+import com.js.basic.MyMath;
 import com.js.camera.camera.R;
 
 import java.util.ArrayList;
@@ -97,12 +101,14 @@ public class AlbumActivity extends Activity implements Observer {
 
   public View buildGridView() {
     GridView v = new GridView(this);
-
-    // Use density pixels here
-    v.setColumnWidth(300);
+    v.setBackgroundColor(Color.GREEN);
+    unimp("use density pixels throughout");
+    mSpacing = 3;
+    mThumbSize = new IPoint(350 - mSpacing, 350 - mSpacing);
+    v.setColumnWidth(mThumbSize.x + mSpacing);
     v.setNumColumns(GridView.AUTO_FIT);
-    v.setVerticalSpacing(10);
-    v.setHorizontalSpacing(10);
+    v.setVerticalSpacing(mSpacing);
+    v.setHorizontalSpacing(mSpacing);
     v.setStretchMode(GridView.STRETCH_COLUMN_WIDTH);
     v.setGravity(Gravity.CENTER);
 
@@ -128,7 +134,59 @@ public class AlbumActivity extends Activity implements Observer {
       case StateChanged:
         rebuildAlbumIfPhotosAvailable();
         break;
+      case BitmapConstructed: {
+        final PhotoInfo photo = (PhotoInfo) params[1];
+        final Bitmap bitmap = (Bitmap) params[2];
+        // If we already have a thumbnail, ignore
+        if (mThumbnailMap.containsKey(photo.getId())) break;
+        // If we're not seeking a thumbnail for this photo, ignore
+        final Integer thumbnailCellIndex = mBuildingThumbnailMap.get(photo.getId());
+        if (thumbnailCellIndex == null)
+          break;
+
+        mBackgroundThreadHandler.post(new Runnable() {
+          @Override
+          public void run() {
+            // Have background thread construct thumbnail from this (full size) bitmap
+            unimp("have background thread construct thumbnail");
+            final Bitmap thumbnailBitmap = constructThumbnailFor(photo, bitmap);
+            AppState.postUIEvent(new Runnable() {
+              @Override
+              public void run() {
+                mThumbnailMap.put(photo.getId(), thumbnailBitmap);
+                mBuildingThumbnailMap.remove(photo.getId());
+                // Invalidate the cell so it gets redrawn using the now-available thumbnail
+                warning("is it possible to do this so only the one cell gets redrawn?");
+                mAdapter.notifyDataSetChanged();
+              }
+            });
+          }
+        });
+      }
+      break;
     }
+  }
+
+  private Bitmap constructThumbnailFor(PhotoInfo photo, Bitmap bitmap) {
+    assertBgndThread();
+    int origWidth = (int) (bitmap.getWidth() * .8f);
+    int origHeight = (int) (bitmap.getHeight() * .8f);
+    int origSize = Math.min(origWidth, origHeight);
+    float scaleFactor = mThumbSize.x / (float) origSize;
+    Matrix m = new Matrix();
+
+    m.postScale(scaleFactor, scaleFactor);
+    Bitmap thumbnail = Bitmap.createBitmap(bitmap,
+        (bitmap.getWidth() - origSize) / 2, (bitmap.getHeight() - origSize) / 2,
+        origSize, origSize, m, true);
+    trace("constructThumbnail for photo " + photo);
+    return thumbnail;
+  }
+
+  private void assertBgndThread() {
+    if (!isUIThread())
+      return;
+    throw new IllegalStateException("Attempt to call from non-bgnd thread " + nameOf(Thread.currentThread()));
   }
 
   private class ImageAdapter extends BaseAdapter {
@@ -146,7 +204,7 @@ public class AlbumActivity extends Activity implements Observer {
     @Override
     public Object getItem(int position) {
       PhotoInfo photo = mPhotos.get(position);
-      trace("getItem position=" + position + " returning " + d(photo));
+//      trace("getItem position=" + position + " returning " + d(photo));
       return photo;
     }
 
@@ -162,15 +220,14 @@ public class AlbumActivity extends Activity implements Observer {
     // create a new ImageView for each item referenced by the Adapter
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-      trace("getView position=" + position);
+//      trace("getView position=" + position);
       ImageView imageView;
       if (convertView == null) {
         // if it's not recycled, initialize some attributes
-        trace("building ImageView");
+        trace("getView position "+position+", building ImageView");
         imageView = new ImageView(mContext);
-        imageView.setLayoutParams(new GridView.LayoutParams(85, 85));
+        imageView.setLayoutParams(new GridView.LayoutParams(mThumbSize.x, mThumbSize.y));
         imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        imageView.setPadding(8, 8, 8, 8);
       } else {
         imageView = (ImageView) convertView;
       }
@@ -182,12 +239,10 @@ public class AlbumActivity extends Activity implements Observer {
       if (bitmap != null) {
         imageView.setImageBitmap(bitmap);
       } else {
-        mBackgroundThreadHandler.post(new Runnable() {
-          @Override
-          public void run() {
-            unimp("load thumbnail for " + photo);
-          }
-        });
+        imageView.setImageBitmap(null);
+        mBuildingThumbnailMap.put(photo.getId(), position);
+        // Ask photo file for (full size) bitmap, and when it's returned, we'll construct a thumbnail
+        mPhotoFile.getBitmap(photo);
       }
       return imageView;
     }
@@ -222,10 +277,13 @@ public class AlbumActivity extends Activity implements Observer {
     return bitmap;
   }
 
+  private int mSpacing;
+  private IPoint mThumbSize;
   private boolean mTrace;
   private BaseAdapter mAdapter;
   private PhotoFile mPhotoFile;
   private List<PhotoInfo> mPhotos = new ArrayList();
   private Map<Integer, Bitmap> mThumbnailMap = new HashMap();
   private Handler mBackgroundThreadHandler;
+  private Map<Integer, Integer> mBuildingThumbnailMap = new HashMap();
 }
