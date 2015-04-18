@@ -152,8 +152,7 @@ public class AlbumActivity extends Activity implements Observer {
         mBackgroundThreadHandler.post(new Runnable() {
           @Override
           public void run() {
-            if (PhotoFile.SIMULATED_DELAYS)
-              sleepFor(500);
+            PhotoFile.simulateDelay(250);
             // Have background thread construct thumbnail from this (full size) bitmap
             final Bitmap thumbnailBitmap = constructThumbnailFor(bitmap);
             trace("constructed thumbnail; " + BitmapTools.size(thumbnailBitmap));
@@ -198,7 +197,7 @@ public class AlbumActivity extends Activity implements Observer {
     // We're no longer requesting a thumbnail for this photo
     mThumbnailRequestedSet.remove(photo.getId());
 
-    trace("thumbnail requested set now " + d(mThumbnailRequestedSet));
+    trace("thumbnail requested set now " + d(mThumbnailRequestedSet, false));
   }
 
   private Bitmap constructThumbnailFor(Bitmap bitmap) {
@@ -278,7 +277,7 @@ public class AlbumActivity extends Activity implements Observer {
         trace("getView position:" + position + ", no thumbnail found");
         // If we're already requesting a thumbnail for this photo, ignore
         if (mThumbnailRequestedSet.add(photo.getId())) {
-          trace("requesting bitmap for this view, to construct thumbnail; set now " + d(mThumbnailRequestedSet));
+          trace("requesting bitmap for this view, to construct thumbnail; set now " + d(mThumbnailRequestedSet, false));
           // Ask photo file for (full size) bitmap, and when it's returned, we'll construct a thumbnail
           mPhotoFile.getBitmap(photo);
         }

@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Observable;
+import java.util.Random;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -60,6 +61,13 @@ public class PhotoFile extends Observable {
 
   public State state() {
     return mState;
+  }
+
+  public static void simulateDelay(int timeMS) {
+    if (!SIMULATED_DELAYS)
+      return;
+    Random r = new Random();
+    sleepFor(((int) (r.nextFloat() * .6f + .7f)) * timeMS);
   }
 
   public void open() {
@@ -208,8 +216,7 @@ public class PhotoFile extends Observable {
     assertBgndThread();
     trace("backgroundThreadOpenFile");
 
-    if (SIMULATED_DELAYS)
-      sleepFor(1200);
+    simulateDelay(1200);
 
     do {
 
@@ -222,11 +229,7 @@ public class PhotoFile extends Observable {
       }
     } while (false);
 
-    if (SIMULATED_DELAYS) {
-      pr("photoFile sleeping...");
-      sleepFor(3000);
-      pr("photoFile waking up...");
-    }
+    simulateDelay(3000);
 
     AppState.postUIEvent(new Runnable() {
       public void run() {
