@@ -21,7 +21,6 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.js.basic.IPoint;
-import com.js.basic.MyMath;
 import com.js.camera.camera.R;
 
 import java.util.ArrayList;
@@ -96,10 +95,11 @@ public class AlbumActivity extends Activity implements Observer {
   }
 
   private View buildContentView() {
-    return buildGridView();
+    mGridView = buildGridView();
+    return mGridView;
   }
 
-  public View buildGridView() {
+  public ViewGroup buildGridView() {
     GridView v = new GridView(this);
     v.setBackgroundColor(Color.GREEN);
     unimp("use density pixels throughout");
@@ -137,27 +137,33 @@ public class AlbumActivity extends Activity implements Observer {
       case BitmapConstructed: {
         final PhotoInfo photo = (PhotoInfo) params[1];
         final Bitmap bitmap = (Bitmap) params[2];
+        trace("BitmapConstructed for " + photo + ": " + bitmap);
         // If we already have a thumbnail, ignore
-        if (mThumbnailMap.containsKey(photo.getId())) break;
-        // If we're not seeking a thumbnail for this photo, ignore
-        final Integer thumbnailCellIndex = mBuildingThumbnailMap.get(photo.getId());
-        if (thumbnailCellIndex == null)
+        if (mThumbnailMap.containsKey(photo.getId())) {
+          trace("thumbnail already exists");
           break;
-
+        }
+        // If we're not seeking a thumbnail for this photo, ignore
+        final Integer thumbnailItemPosition = mBuildingThumbnailMap.get(photo.getId());
+        if (thumbnailItemPosition == null)
+          break;
+        trace("thumbnail item position = " + thumbnailItemPosition);
         mBackgroundThreadHandler.post(new Runnable() {
           @Override
           public void run() {
             // Have background thread construct thumbnail from this (full size) bitmap
-            unimp("have background thread construct thumbnail");
             final Bitmap thumbnailBitmap = constructThumbnailFor(photo, bitmap);
+            trace("constructed thumbnail; " + BitmapTools.size(thumbnailBitmap));
             AppState.postUIEvent(new Runnable() {
               @Override
               public void run() {
+                trace("storing thumbnail bitmap " + nameOf(thumbnailBitmap) + " within map, key " + photo);
                 mThumbnailMap.put(photo.getId(), thumbnailBitmap);
                 mBuildingThumbnailMap.remove(photo.getId());
-                // Invalidate the cell so it gets redrawn using the now-available thumbnail
-                warning("is it possible to do this so only the one cell gets redrawn?");
-                mAdapter.notifyDataSetChanged();
+                ImageView cell = mGridViewItemToImageViewMap.get(thumbnailItemPosition);
+                if (cell == null)
+                  throw new IllegalArgumentException("no ImageView found for position " + thumbnailItemPosition);
+                cell.setImageBitmap(thumbnailBitmap);
               }
             });
           }
@@ -204,7 +210,7 @@ public class AlbumActivity extends Activity implements Observer {
     @Override
     public Object getItem(int position) {
       PhotoInfo photo = mPhotos.get(position);
-//      trace("getItem position=" + position + " returning " + d(photo));
+      trace("getItem position=" + position + " returning " + d(photo));
       return photo;
     }
 
@@ -220,17 +226,18 @@ public class AlbumActivity extends Activity implements Observer {
     // create a new ImageView for each item referenced by the Adapter
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-//      trace("getView position=" + position);
       ImageView imageView;
       if (convertView == null) {
         // if it's not recycled, initialize some attributes
-        trace("getView position "+position+", building ImageView");
         imageView = new ImageView(mContext);
         imageView.setLayoutParams(new GridView.LayoutParams(mThumbSize.x, mThumbSize.y));
         imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        trace("getView position " + position + " =>    built " + nameOf(imageView));
       } else {
         imageView = (ImageView) convertView;
+        trace("getView position " + position + " => existing " + nameOf(imageView));
       }
+      mGridViewItemToImageViewMap.put(position, imageView);
       final PhotoInfo photo = getPhoto(position);
 
       // If thumbnail exists for this photo, use it;
@@ -239,10 +246,12 @@ public class AlbumActivity extends Activity implements Observer {
       if (bitmap != null) {
         imageView.setImageBitmap(bitmap);
       } else {
+        trace("getView position:" + position + ", no thumbnail found");
         imageView.setImageBitmap(null);
         mBuildingThumbnailMap.put(photo.getId(), position);
         // Ask photo file for (full size) bitmap, and when it's returned, we'll construct a thumbnail
         mPhotoFile.getBitmap(photo);
+        // Simplify this by passing a continuation block (to be executed on the UI thread)
       }
       return imageView;
     }
@@ -282,8 +291,12 @@ public class AlbumActivity extends Activity implements Observer {
   private boolean mTrace;
   private BaseAdapter mAdapter;
   private PhotoFile mPhotoFile;
+  private ViewGroup mGridView;
   private List<PhotoInfo> mPhotos = new ArrayList();
   private Map<Integer, Bitmap> mThumbnailMap = new HashMap();
   private Handler mBackgroundThreadHandler;
+  // For building thumbnails, a map of which GridView item is associated with a photo
   private Map<Integer, Integer> mBuildingThumbnailMap = new HashMap();
+  // Map of which ImageView is mapped to each GridView item
+  private Map<Integer, ImageView> mGridViewItemToImageViewMap = new HashMap();
 }
