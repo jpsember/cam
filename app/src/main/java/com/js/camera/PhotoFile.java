@@ -33,7 +33,7 @@ import static com.js.basic.Tools.*;
  */
 public class PhotoFile extends Observable {
 
-  private static final boolean SIMULATED_DELAYS = true;
+  public static final boolean SIMULATED_DELAYS = true;
   private static final boolean WITH_ASSERTIONS = true;
   // Start with a fresh photo directory on each run?
   private static final boolean DELETE_ROOT_DIRECTORY = false;

@@ -25,10 +25,12 @@ import com.js.camera.camera.R;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Set;
 
 import static com.js.basic.Tools.*;
 import static com.js.android.AndroidTools.*;
@@ -68,7 +70,7 @@ public class AlbumActivity extends Activity implements Observer {
     trace("onPause");
     mPhotoFile.deleteObserver(this);
     mPhotos.clear();
-    mThumbnailMap.clear();
+    mPhotoIdToThumbnailBitmapMap.clear();
     super.onPause();
   }
 
@@ -138,19 +140,18 @@ public class AlbumActivity extends Activity implements Observer {
         final PhotoInfo photo = (PhotoInfo) params[1];
         final Bitmap bitmap = (Bitmap) params[2];
         trace("BitmapConstructed for " + photo + ": " + bitmap);
-        // If we already have a thumbnail, ignore
-        if (mThumbnailMap.containsKey(photo.getId())) {
-          trace("thumbnail already exists");
+        // If we're not constructing a thumbnail, ignore
+        if (!mThumbnailRequestedSet.contains(photo.getId())) {
+          trace("not requesting thumbnail");
           break;
         }
-        // If we're not seeking a thumbnail for this photo, ignore
-        final Integer thumbnailItemPosition = mBuildingThumbnailMap.get(photo.getId());
-        if (thumbnailItemPosition == null)
-          break;
-        trace("thumbnail item position = " + thumbnailItemPosition);
+        if (mPhotoIdToThumbnailBitmapMap.containsKey(photo.getId())) {
+          throw new IllegalStateException("thumbnail already exists");
+        }
         mBackgroundThreadHandler.post(new Runnable() {
           @Override
           public void run() {
+            if (PhotoFile.SIMULATED_DELAYS) sleepFor(500);
             // Have background thread construct thumbnail from this (full size) bitmap
             final Bitmap thumbnailBitmap = constructThumbnailFor(photo, bitmap);
             trace("constructed thumbnail; " + BitmapTools.size(thumbnailBitmap));
@@ -158,12 +159,15 @@ public class AlbumActivity extends Activity implements Observer {
               @Override
               public void run() {
                 trace("storing thumbnail bitmap " + nameOf(thumbnailBitmap) + " within map, key " + photo);
-                mThumbnailMap.put(photo.getId(), thumbnailBitmap);
-                mBuildingThumbnailMap.remove(photo.getId());
-                ImageView cell = mGridViewItemToImageViewMap.get(thumbnailItemPosition);
+                mPhotoIdToThumbnailBitmapMap.put(photo.getId(), thumbnailBitmap);
+                ImageView cell = mPhotoToImageViewBiMap.get(photo.getId());
                 if (cell == null)
-                  throw new IllegalArgumentException("no ImageView found for position " + thumbnailItemPosition);
+                  throw new IllegalArgumentException("no ImageView found for photo id " + photo.getId());
                 cell.setImageBitmap(thumbnailBitmap);
+                trace("set image bitmap to " + nameOf(thumbnailBitmap, false) + " for ImageView " + nameOf(cell));
+                // We're no longer requesting a thumbnail for this photo
+                mThumbnailRequestedSet.remove(photo.getId());
+                trace("thumbnail requested set now " + d(mThumbnailRequestedSet));
               }
             });
           }
@@ -185,7 +189,6 @@ public class AlbumActivity extends Activity implements Observer {
     Bitmap thumbnail = Bitmap.createBitmap(bitmap,
         (bitmap.getWidth() - origSize) / 2, (bitmap.getHeight() - origSize) / 2,
         origSize, origSize, m, true);
-    trace("constructThumbnail for photo " + photo);
     return thumbnail;
   }
 
@@ -210,7 +213,6 @@ public class AlbumActivity extends Activity implements Observer {
     @Override
     public Object getItem(int position) {
       PhotoInfo photo = mPhotos.get(position);
-      trace("getItem position=" + position + " returning " + d(photo));
       return photo;
     }
 
@@ -226,6 +228,7 @@ public class AlbumActivity extends Activity implements Observer {
     // create a new ImageView for each item referenced by the Adapter
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
+      trace("getView for position " + position + ", convertView " + nameOf(convertView, false));
       ImageView imageView;
       if (convertView == null) {
         // if it's not recycled, initialize some attributes
@@ -235,22 +238,29 @@ public class AlbumActivity extends Activity implements Observer {
         trace("getView position " + position + " =>    built " + nameOf(imageView));
       } else {
         imageView = (ImageView) convertView;
+        // Dispose of any old bitmap
+        imageView.setImageBitmap(null);
         trace("getView position " + position + " => existing " + nameOf(imageView));
       }
-      mGridViewItemToImageViewMap.put(position, imageView);
       final PhotoInfo photo = getPhoto(position);
+
+      // Establish bidirectional mapping between photo <=> view
+      mPhotoToImageViewBiMap.put(photo.getId(), imageView);
 
       // If thumbnail exists for this photo, use it;
       // otherwise, build it asynchronously and refresh this item when it's available
       Bitmap bitmap = getThumbnailForPhoto(photo);
       if (bitmap != null) {
+        trace("using existing thumbnail " + nameOf(bitmap, false));
         imageView.setImageBitmap(bitmap);
       } else {
         trace("getView position:" + position + ", no thumbnail found");
-        imageView.setImageBitmap(null);
-        mBuildingThumbnailMap.put(photo.getId(), position);
-        // Ask photo file for (full size) bitmap, and when it's returned, we'll construct a thumbnail
-        mPhotoFile.getBitmap(photo);
+        // If we're already requesting a thumbnail for this photo, ignore
+        if (mThumbnailRequestedSet.add(photo.getId())) {
+          trace("requesting bitmap for this view, to construct thumbnail; set now " + d(mThumbnailRequestedSet));
+          // Ask photo file for (full size) bitmap, and when it's returned, we'll construct a thumbnail
+          mPhotoFile.getBitmap(photo);
+        }
         // Simplify this by passing a continuation block (to be executed on the UI thread)
       }
       return imageView;
@@ -282,8 +292,30 @@ public class AlbumActivity extends Activity implements Observer {
   }
 
   private Bitmap getThumbnailForPhoto(PhotoInfo photo) {
-    Bitmap bitmap = mThumbnailMap.get(photo.getId());
+    Bitmap bitmap = mPhotoIdToThumbnailBitmapMap.get(photo.getId());
     return bitmap;
+  }
+
+  /**
+   * A bidirectional map between photo ids <=> ImageViews
+   */
+  private static class BiMap {
+    public void put(Integer photoId, ImageView imageView) {
+      // Clear any old mappings associated with these two
+      ImageView oldView = mPhotoIdToImageViewMap.get(photoId);
+      if (oldView != null) {
+        mImageViewToPhotoIdMap.remove(oldView);
+      }
+      mPhotoIdToImageViewMap.put(photoId, imageView);
+      mImageViewToPhotoIdMap.put(imageView, photoId);
+    }
+
+    public ImageView get(Integer photoId) {
+      return mPhotoIdToImageViewMap.get(photoId);
+    }
+
+    private Map<Integer, ImageView> mPhotoIdToImageViewMap = new HashMap();
+    private Map<ImageView, Integer> mImageViewToPhotoIdMap = new HashMap();
   }
 
   private int mSpacing;
@@ -293,10 +325,8 @@ public class AlbumActivity extends Activity implements Observer {
   private PhotoFile mPhotoFile;
   private ViewGroup mGridView;
   private List<PhotoInfo> mPhotos = new ArrayList();
-  private Map<Integer, Bitmap> mThumbnailMap = new HashMap();
+  private Map<Integer, Bitmap> mPhotoIdToThumbnailBitmapMap = new HashMap();
   private Handler mBackgroundThreadHandler;
-  // For building thumbnails, a map of which GridView item is associated with a photo
-  private Map<Integer, Integer> mBuildingThumbnailMap = new HashMap();
-  // Map of which ImageView is mapped to each GridView item
-  private Map<Integer, ImageView> mGridViewItemToImageViewMap = new HashMap();
+  private BiMap mPhotoToImageViewBiMap = new BiMap();
+  private Set<Integer> mThumbnailRequestedSet = new HashSet();
 }
