@@ -152,9 +152,10 @@ public class AlbumActivity extends Activity implements Observer {
         mBackgroundThreadHandler.post(new Runnable() {
           @Override
           public void run() {
-            if (PhotoFile.SIMULATED_DELAYS) sleepFor(500);
+            if (PhotoFile.SIMULATED_DELAYS)
+              sleepFor(500);
             // Have background thread construct thumbnail from this (full size) bitmap
-            final Bitmap thumbnailBitmap = constructThumbnailFor(photo, bitmap);
+            final Bitmap thumbnailBitmap = constructThumbnailFor(bitmap);
             trace("constructed thumbnail; " + BitmapTools.size(thumbnailBitmap));
             AppState.postUIEvent(new Runnable() {
               @Override
@@ -200,7 +201,7 @@ public class AlbumActivity extends Activity implements Observer {
     trace("thumbnail requested set now " + d(mThumbnailRequestedSet));
   }
 
-  private Bitmap constructThumbnailFor(PhotoInfo photo, Bitmap bitmap) {
+  private Bitmap constructThumbnailFor(Bitmap bitmap) {
     assertBgndThread();
     int origWidth = (int) (bitmap.getWidth() * .8f);
     int origHeight = (int) (bitmap.getHeight() * .8f);
@@ -285,14 +286,6 @@ public class AlbumActivity extends Activity implements Observer {
       }
       return imageView;
     }
-
-    private int getThumbId(int position) {
-      return mThumbIds[myMod(position, mThumbIds.length)];
-    }
-
-    private int[] mThumbIds = {
-        R.drawable.ic_launcher, R.drawable.round_button, R.drawable.ic_launcher,
-    };
   }
 
   public void setTrace(boolean state) {
