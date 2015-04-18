@@ -96,7 +96,7 @@ public class PhotoInfo extends Freezable.Mutable {
     mId = id;
   }
 
-  public Integer getId() {
+  public int getId() {
     return mId;
   }
 
@@ -143,6 +143,6 @@ public class PhotoInfo extends Freezable.Mutable {
   private int mCreationTime;
   private int mCurrentAgeState;
   private int mTargetAgeState;
-  private Integer mId;
+  private int mId;
   private volatile String mJSON;
 }

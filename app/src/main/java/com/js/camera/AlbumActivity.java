@@ -63,7 +63,7 @@ public class AlbumActivity extends Activity implements Observer {
       return;
     mPhotos.clear();
     mPhotos.addAll(mPhotoFile.getPhotos(0, Integer.MAX_VALUE / 10));
-    mAdapter.notifyDataSetChanged();
+    ((ImageAdapter) mGridView.getAdapter()).notifyDataSetChanged();
   }
 
   @Override
@@ -106,17 +106,15 @@ public class AlbumActivity extends Activity implements Observer {
     GridView v = new GridView(this);
     v.setBackgroundColor(Color.GREEN);
     unimp("use density pixels throughout");
-    mSpacing = 3;
-    mThumbSize = new IPoint(350 - mSpacing, 350 - mSpacing);
-    v.setColumnWidth(mThumbSize.x + mSpacing);
+    int spacing = 5;
+    mThumbSize = new IPoint(350 - spacing, 350 - spacing);
+    v.setColumnWidth(mThumbSize.x + spacing);
     v.setNumColumns(GridView.AUTO_FIT);
-    v.setVerticalSpacing(mSpacing);
-    v.setHorizontalSpacing(mSpacing);
+    v.setVerticalSpacing(spacing);
+    v.setHorizontalSpacing(spacing);
     v.setStretchMode(GridView.STRETCH_COLUMN_WIDTH);
     v.setGravity(Gravity.CENTER);
-
-    mAdapter = new ImageAdapter(this);
-    v.setAdapter(mAdapter);
+    v.setAdapter(new ImageAdapter(this));
 
     v.setOnItemClickListener(new AdapterView.OnItemClickListener() {
       public void onItemClick(AdapterView<?> parent, View v,
@@ -175,7 +173,7 @@ public class AlbumActivity extends Activity implements Observer {
     trace("storing thumbnail bitmap " + nameOf(thumbnailBitmap) + " within map, key " + photo);
     if (LIMIT_THUMBNAIL_MAP_SIZE) {
       warning("limiting size of thumbnail map");
-      List<Integer> keys = new ArrayList();
+      List<Integer> keys = new ArrayList<Integer>();
       keys.addAll(mPhotoIdToThumbnailBitmapMap.keySet());
       Random r = new Random();
       while (mPhotoIdToThumbnailBitmapMap.size() >= 6) {
@@ -188,7 +186,7 @@ public class AlbumActivity extends Activity implements Observer {
     int start = mGridView.getFirstVisiblePosition();
     for (int i = start, j = mGridView.getLastVisiblePosition(); i <= j; i++) {
       PhotoInfo itemPhoto = (PhotoInfo) mGridView.getItemAtPosition(i);
-      if (photo.getId().equals(itemPhoto.getId())) {
+      if (photo.getId() == itemPhoto.getId()) {
         View view = mGridView.getChildAt(i - start);
         mGridView.getAdapter().getView(i, view, mGridView);
         break;
@@ -308,10 +306,8 @@ public class AlbumActivity extends Activity implements Observer {
     return bitmap;
   }
 
-  private int mSpacing;
   private IPoint mThumbSize;
   private boolean mTrace;
-  private BaseAdapter mAdapter;
   private PhotoFile mPhotoFile;
   private GridView mGridView;
   private List<PhotoInfo> mPhotos = new ArrayList();
