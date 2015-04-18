@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Random;
 import java.util.Set;
 
 import static com.js.basic.Tools.*;
@@ -168,8 +169,20 @@ public class AlbumActivity extends Activity implements Observer {
     }
   }
 
+  private static final boolean LIMIT_THUMBNAIL_MAP_SIZE = true;
+
   private void receivedThumbnail(PhotoInfo photo, Bitmap thumbnailBitmap) {
     trace("storing thumbnail bitmap " + nameOf(thumbnailBitmap) + " within map, key " + photo);
+    if (LIMIT_THUMBNAIL_MAP_SIZE) {
+      warning("limiting size of thumbnail map");
+      List<Integer> keys = new ArrayList();
+      keys.addAll(mPhotoIdToThumbnailBitmapMap.keySet());
+      Random r = new Random();
+      while (mPhotoIdToThumbnailBitmapMap.size() >= 6) {
+        int ind = r.nextInt(keys.size());
+        mPhotoIdToThumbnailBitmapMap.remove(keys.get(ind));
+      }
+    }
     mPhotoIdToThumbnailBitmapMap.put(photo.getId(), thumbnailBitmap);
 
     int start = mGridView.getFirstVisiblePosition();
