@@ -32,7 +32,6 @@ import static com.js.basic.Tools.*;
  */
 public class PhotoFile extends Observable {
 
-  private static final boolean WITH_ASSERTIONS = true;
   // Start with a fresh photo directory on each run?
   private static final boolean DELETE_ROOT_DIRECTORY = false;
 
@@ -60,6 +59,112 @@ public class PhotoFile extends Observable {
     return mState;
   }
 
+  private class OpenCameraTask extends TaskSequence {
+    @Override
+    protected void execute(int stageNumber) {
+      switch (stageNumber) {
+        case 0: {
+          trace("backgroundThreadOpenFile");
+          if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
+            mFailMessage = "No writable external storage found";
+            break;
+          }
+          prepareRootDirectory();
+        }
+        break;
+
+        case 1:
+          if (mFailMessage != null) {
+            setFailed(mFailMessage);
+            abort();
+          }
+          setState(State.Open);
+          notifyEventObservers(Event.StateChanged);
+          finish();
+          break;
+      }
+    }
+
+    private void prepareRootDirectory() {
+      mRootDirectory = new File(mContext.getExternalFilesDir(null), "Photos");
+
+      try {
+        if (!mRootDirectory.exists()) {
+          mRootDirectory.mkdir();
+          if (!mRootDirectory.exists()) {
+            throw new IOException("unable to create root directory");
+          }
+          mModified = true;
+          flush();
+        } else {
+          if (DELETE_ROOT_DIRECTORY) {
+            warning("deleting photos root directory");
+            FileUtils.cleanDirectory(mRootDirectory);
+          }
+          readFileState();
+        }
+        readPhotoRecords();
+        trace("Opened root directory " + mRootDirectory);
+      } catch (IOException e) {
+        mFailMessage = "preparing root; " + d(e);
+      }
+    }
+
+    private void readFileState() throws IOException {
+      File stateFile = getStateFile();
+      if (!stateFile.exists())
+        return;
+      String jsonString = Files.readString(stateFile);
+      trace("Reading file state: " + jsonString);
+      try {
+        JSONObject map = JSONTools.parseMap(jsonString);
+        mNextPhotoId = map.getInt(KEY_NEXTID);
+        mRandomSeed = map.optInt(KEY_RANDOMSEED, 1);
+      } catch (JSONException e) {
+        throw new IOException(e);
+      }
+    }
+
+    private void readPhotoRecords() {
+      SortedSet<PhotoInfo> photoSet = new TreeSet<PhotoInfo>(new Comparator<PhotoInfo>() {
+        @Override
+        public int compare(PhotoInfo i1, PhotoInfo i2) {
+          return i1.getId() - i2.getId();
+        }
+      });
+
+      File[] fList = mRootDirectory.listFiles();
+      for (File file : fList) {
+        if (file.isFile()) {
+          String fileStr = file.getName();
+          String extension = FilenameUtils.getExtension(fileStr);
+          if (!extension.equals("jpg"))
+            continue;
+          String baseName = FilenameUtils.getBaseName(fileStr);
+          int id;
+          try {
+            id = Integer.parseInt(baseName);
+          } catch (NumberFormatException e) {
+            continue;
+          }
+          PhotoInfo photoInfo;
+          try {
+            File photoInfoPath = getPhotoInfoPath(id);
+            String jsonString = Files.readString(photoInfoPath);
+            photoInfo = PhotoInfo.parseJSON(jsonString);
+          } catch (Throwable t) {
+            warning("Failed to read or parse " + file);
+            continue;
+          }
+          photoSet.add(photoInfo);
+        }
+      }
+      mPhotoSet = photoSet;
+    }
+
+    private String mFailMessage;
+  }
+
   public void open() {
     assertUIThread();
     if (mState != State.Start)
@@ -69,34 +174,40 @@ public class PhotoFile extends Observable {
 
     setState(State.Opening);
 
-    TaskSequence t = new TaskSequence() {
-      @Override
-      protected void execute(int stageNumber) {
-        switch (stageNumber) {
-          case 0: {
-            trace("backgroundThreadOpenFile");
-            if (!isExternalStorageWritable()) {
-              setFailed("No writable external storage found");
-              abort();
-              break;
-            }
-            if (!prepareRootDirectory())
-              abort();
-          }
-          break;
-          case 1:
-            setState(State.Open);
-            notifyEventObservers(Event.StateChanged);
-            finish();
-            break;
-        }
-      }
-    };
+    TaskSequence t = new OpenCameraTask();
     t.start();
   }
 
   public boolean isOpen() {
     return mState == State.Open;
+  }
+
+  private class CloseCameraTask extends TaskSequence {
+    @Override
+    protected void execute(int stageNumber) {
+      switch (stageNumber) {
+        case 0: {
+          trace("backgroundThreadCloseFile");
+          try {
+            flush();
+          } catch (IOException e) {
+            mFailMessage = "closing file; " + d(e);
+          }
+        }
+        break;
+
+        case 1:
+          if (mFailMessage != null) {
+            setFailed(mFailMessage);
+            abort();
+          }
+          setState(State.Closed);
+          finish();
+          break;
+      }
+    }
+
+    private String mFailMessage;
   }
 
   public void close() {
@@ -106,27 +217,8 @@ public class PhotoFile extends Observable {
       return;
 
     setState(State.Closing);
-    TaskSequence t = new TaskSequence() {
-      @Override
-      protected void execute(int stageNumber) {
-        switch (stageNumber) {
-          case 0:
-            trace("backgroundThreadCloseFile");
-            try {
-              flush();
-            } catch (IOException e) {
-              bgndFail("closing file", e);
-            }
-            break;
-          default:
-            setState(State.Closed);
-            finish();
-            break;
-        }
-      }
-    };
+    TaskSequence t = new CloseCameraTask();
     t.start();
-
   }
 
   public void assertOpen() {
@@ -147,25 +239,42 @@ public class PhotoFile extends Observable {
   public void createPhoto(final byte[] jpegData, final int rotationToApply) {
     assertOpen();
     TaskSequence t = new TaskSequence() {
-      private PhotoInfo mPhotoInfo;
 
       @Override
       protected void execute(int stageNumber) {
         switch (stageNumber) {
           case 0:
             try {
-              mPhotoInfo = backgroundThreadCreatePhoto(jpegData, rotationToApply);
+              Bitmap bitmap = BitmapFactory.decodeByteArray(jpegData, 0, jpegData.length);
+              bitmap = BitmapTools.rotateBitmap(bitmap, rotationToApply);
+              PhotoInfo info = createPhotoInfo();
+
+              // Scale photo to size appropriate to starting state
+              unimp("scale photo to starting state");
+
+              File photoPath = getPhotoBitmapPath(info.getId());
+              trace("Writing " + info + " to " + photoPath);
+              OutputStream stream = new FileOutputStream(photoPath);
+              bitmap.compress(Bitmap.CompressFormat.JPEG, PhotoInfo.JPEG_QUALITY_MAX, stream);
+              mPhotoInfo = info;
             } catch (IOException e) {
-              bgndFail("create photo", e);
-              abort();
+              mFailMessage = "create photo; " + d(e);
             }
             break;
           case 1:
-            notifyEventObservers(Event.PhotoCreated, mPhotoInfo);
-            finish();
+            if (mFailMessage != null) {
+              setFailed(mFailMessage);
+              abort();
+            } else {
+              notifyEventObservers(Event.PhotoCreated, mPhotoInfo);
+              finish();
+            }
             break;
         }
       }
+
+      private PhotoInfo mPhotoInfo;
+      private String mFailMessage;
     };
     t.start();
   }
@@ -195,8 +304,7 @@ public class PhotoFile extends Observable {
     protected void execute(int stageNumber) {
       switch (stageNumber) {
         case 0: {
-          Bitmap bitmap = readBitmapFromFile(mPhotoInfo);
-
+          Bitmap bitmap = readBitmapFromFile();
           PhotoManipulator m = new PhotoManipulator(PhotoFile.this, mPhotoInfo, bitmap);
           mAgedPhoto = m.getManipulatedBitmap();
         }
@@ -206,6 +314,13 @@ public class PhotoFile extends Observable {
           finish();
           break;
       }
+    }
+
+    private Bitmap readBitmapFromFile() {
+      File photoPath = getPhotoBitmapPath(mPhotoInfo.getId());
+      trace("Reading " + mPhotoInfo + " bitmap from " + photoPath.getName());
+      Bitmap bitmap = BitmapFactory.decodeFile(photoPath.getPath());
+      return bitmap;
     }
 
     private Bitmap mAgedPhoto;
@@ -240,14 +355,6 @@ public class PhotoFile extends Observable {
     notifyEventObservers(Event.StateChanged);
   }
 
-  private void assertUIThread() {
-    if (!WITH_ASSERTIONS)
-      return;
-    if (isUIThread())
-      return;
-    throw new IllegalStateException("Attempt to call from non-UI thread " + nameOf(Thread.currentThread()));
-  }
-
   private void setState(State state) {
     assertUIThread();
     if (mState != state) {
@@ -258,51 +365,6 @@ public class PhotoFile extends Observable {
 
   // --------------- Methods called only within background thread
   // --------------- (consider putting these in their own class for simplicity?  Or add prefix?)
-
-  private void assertBgndThread() {
-    if (!WITH_ASSERTIONS)
-      return;
-    if (!isUIThread())
-      return;
-    throw new IllegalStateException("Attempt to call from non-bgnd thread " + nameOf(Thread.currentThread()));
-  }
-
-  private boolean prepareRootDirectory() {
-    assertBgndThread();
-    mRootDirectory = new File(mContext.getExternalFilesDir(null), "Photos");
-
-    try {
-      if (!mRootDirectory.exists()) {
-        mRootDirectory.mkdir();
-        if (!mRootDirectory.exists())
-          return false;
-        mModified = true;
-        flush();
-      } else {
-        if (DELETE_ROOT_DIRECTORY) {
-          warning("deleting photos root directory");
-          FileUtils.cleanDirectory(mRootDirectory);
-        }
-        readFileState();
-      }
-      readPhotoRecords();
-    } catch (IOException e) {
-      bgndFail("preparing root", e);
-      return false;
-    }
-    trace("Opened root directory " + mRootDirectory);
-
-    return true;
-  }
-
-  private boolean isExternalStorageWritable() {
-    assertBgndThread();
-    String state = Environment.getExternalStorageState();
-    if (Environment.MEDIA_MOUNTED.equals(state)) {
-      return true;
-    }
-    return false;
-  }
 
   private void flush() throws IOException {
     assertBgndThread();
@@ -316,7 +378,6 @@ public class PhotoFile extends Observable {
   private static final String KEY_RANDOMSEED = "randomseed";
 
   private void writeFileState() throws IOException {
-    assertBgndThread();
     JSONObject map = new JSONObject();
     String jsonString;
     try {
@@ -333,53 +394,6 @@ public class PhotoFile extends Observable {
   private File getStateFile() {
     assertBgndThread();
     return new File(mRootDirectory, "state");
-  }
-
-  private void readFileState() throws IOException {
-    assertBgndThread();
-    File stateFile = getStateFile();
-    if (!stateFile.exists())
-      return;
-    String jsonString = Files.readString(stateFile);
-    trace("Reading file state: " + jsonString);
-    try {
-      JSONObject map = JSONTools.parseMap(jsonString);
-      mNextPhotoId = map.getInt(KEY_NEXTID);
-      mRandomSeed = map.optInt(KEY_RANDOMSEED, 1);
-    } catch (JSONException e) {
-      throw new IOException(e);
-    }
-  }
-
-  private void bgndFail(Object message, Throwable t) {
-    assertBgndThread();
-    String failMessage = message.toString();
-    if (t != null)
-      failMessage += "; " + d(t);
-    final String finalMessage = failMessage;
-
-    AppState.postUIEvent(new Runnable() {
-      public void run() {
-        setFailed(finalMessage);
-      }
-    });
-  }
-
-  private PhotoInfo backgroundThreadCreatePhoto(byte[] jpegData, int rotationToApply) throws IOException {
-    assertBgndThread();
-    Bitmap bitmap = BitmapFactory.decodeByteArray(jpegData, 0, jpegData.length);
-    bitmap = BitmapTools.rotateBitmap(bitmap, rotationToApply);
-    PhotoInfo info = createPhotoInfo();
-
-    // Scale photo to size appropriate to starting state
-    unimp("scale photo to starting state");
-
-    File photoPath = getPhotoBitmapPath(info.getId());
-    trace("Writing " + info + " to " + photoPath);
-    OutputStream stream = new FileOutputStream(photoPath);
-    bitmap.compress(Bitmap.CompressFormat.JPEG, PhotoInfo.JPEG_QUALITY_MAX, stream);
-
-    return info;
   }
 
   private PhotoInfo createPhotoInfo() throws IOException {
@@ -420,50 +434,6 @@ public class PhotoFile extends Observable {
     return new File(mRootDirectory, "" + photoId + ".json");
   }
 
-  private void readPhotoRecords() {
-    SortedSet<PhotoInfo> photoSet = new TreeSet<PhotoInfo>(new Comparator<PhotoInfo>() {
-      @Override
-      public int compare(PhotoInfo i1, PhotoInfo i2) {
-        return i1.getId() - i2.getId();
-      }
-    });
-
-    File[] fList = mRootDirectory.listFiles();
-    for (File file : fList) {
-      if (file.isFile()) {
-        String fileStr = file.getName();
-        String extension = FilenameUtils.getExtension(fileStr);
-        if (!extension.equals("jpg"))
-          continue;
-        String baseName = FilenameUtils.getBaseName(fileStr);
-        int id;
-        try {
-          id = Integer.parseInt(baseName);
-        } catch (NumberFormatException e) {
-          continue;
-        }
-        PhotoInfo photoInfo;
-        try {
-          File photoInfoPath = getPhotoInfoPath(id);
-          String jsonString = Files.readString(photoInfoPath);
-          photoInfo = PhotoInfo.parseJSON(jsonString);
-        } catch (Throwable t) {
-          warning("Failed to read or parse " + file);
-          continue;
-        }
-        photoSet.add(photoInfo);
-      }
-    }
-    mPhotoSet = photoSet;
-  }
-
-  private Bitmap readBitmapFromFile(PhotoInfo photoInfo) {
-    File photoPath = getPhotoBitmapPath(photoInfo.getId());
-    trace("Reading " + photoInfo + " bitmap from " + photoPath.getName());
-    Bitmap bitmap = BitmapFactory.decodeFile(photoPath.getPath());
-    return bitmap;
-  }
-
   public int getRandomSeed() {
     return mRandomSeed;
   }
@@ -491,7 +461,6 @@ public class PhotoFile extends Observable {
   private int mRandomSeed;
 
   // These fields should only be accessed by the background thread
-
   private File mRootDirectory;
   private boolean mModified;
   private int mNextPhotoId;

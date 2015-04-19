@@ -70,6 +70,18 @@ public final class AndroidTools {
     return Thread.currentThread() == Looper.getMainLooper().getThread();
   }
 
+  public static void assertUIThread() {
+    if (isUIThread())
+      return;
+    throw new IllegalStateException("Attempt to call from non-UI thread " + nameOf(Thread.currentThread()));
+  }
+
+  public static void assertBgndThread() {
+    if (!isUIThread())
+      return;
+    throw new IllegalStateException("Attempt to call from UI thread " + nameOf(Thread.currentThread()));
+  }
+
   private static class AndroidSystemOutFilter extends PrintStream {
 
     public static void install() {

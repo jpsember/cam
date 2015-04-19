@@ -342,12 +342,6 @@ public class MyCamera {
     setProperties(p);
   }
 
-  private void assertUIThread() {
-    if (isUIThread())
-      return;
-    throw new IllegalStateException("Attempt to call from non-UI thread " + nameOf(Thread.currentThread()));
-  }
-
   private void setProperties(Properties p) {
     mProperties = frozen(p);
   }
