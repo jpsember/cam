@@ -98,7 +98,7 @@ public class PhotoFile extends Observable {
     setState(State.Closing);
     TaskSequence t = new TaskSequence() {
       @Override
-      protected boolean execute(int stageNumber) {
+      protected void execute(int stageNumber) {
         switch (stageNumber) {
           case 0:
             trace("backgroundThreadCloseFile");
@@ -107,10 +107,11 @@ public class PhotoFile extends Observable {
             } catch (IOException e) {
               bgndFail("closing file", e);
             }
-            return false;
+            break;
           default:
             setState(State.Closed);
-            return true;
+            finish();
+            break;
         }
       }
     };

@@ -25,14 +25,13 @@ public abstract class TaskSequence {
    */
   public void start() {
     assertStarted(false);
-
+    setState(State.STARTED);
     nRunnable = new Runnable() {
       @Override
       public void run() {
         runAux();
       }
     };
-
     startNextStage();
   }
 
@@ -52,12 +51,25 @@ public abstract class TaskSequence {
   }
 
   /**
-   * Execute the next stage of the task
+   * Execute the next stage of the task.  The last task must call finish() when it has completed
    *
    * @param stageNumber stage number (0...n-1)
-   * @return true if task is complete (or should be aborted); false if there are more stages
    */
-  protected abstract boolean execute(int stageNumber);
+  protected abstract void execute(int stageNumber);
+
+  /**
+   * Stop the task sequence abnormally
+   */
+  protected void abort() {
+    setState(State.ABORTED);
+  }
+
+  /**
+   * Stop the task sequence due to its having completed
+   */
+  protected void finish() {
+    setState(State.FINISHED);
+  }
 
   private void startNextStage() {
     if (nStage == MAX_STAGES)
@@ -74,15 +86,15 @@ public abstract class TaskSequence {
       int delay = (int) (f * nSleepTime);
       sleepFor(delay);
     }
-
-    if (execute(nStage))
+    execute(nStage);
+    if (nState != State.STARTED)
       return;
     nStage++;
     startNextStage();
   }
 
   private boolean started() {
-    return nRunnable != null;
+    return nState != State.WAITING;
   }
 
   private void assertStarted(boolean started) {
@@ -90,8 +102,22 @@ public abstract class TaskSequence {
       throw new IllegalStateException();
   }
 
+  private enum State {
+    WAITING,
+    STARTED,
+    ABORTED,
+    FINISHED,
+  }
+
+  private void setState(State state) {
+    if (nState == State.ABORTED || nState == State.FINISHED)
+      return;
+    nState = state;
+  }
+
   private Runnable nRunnable;
   private int nStage;
   private Random nRandom;
   private int nSleepTime;
+  private State nState = State.WAITING;
 }

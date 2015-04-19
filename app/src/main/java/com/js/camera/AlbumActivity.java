@@ -163,18 +163,20 @@ public class AlbumActivity extends Activity implements Observer {
     }
 
     @Override
-    protected boolean execute(int stageNumber) {
-      if (!mResumed)
-        return true;
+    protected void execute(int stageNumber) {
+      if (!mResumed) {
+        abort();
+        return;
+      }
       switch (stageNumber) {
         case 0:
           constructThumbnail();
           break;
         case 1:
           receivedThumbnail();
-          return true;
+          finish();
+          break;
       }
-      return false;
     }
 
     private void constructThumbnail() {

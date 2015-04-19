@@ -81,7 +81,7 @@ public class MyCamera {
     TaskSequence t =
         new TaskSequence() {
           @Override
-          protected boolean execute(int stageNumber) {
+          protected void execute(int stageNumber) {
             switch (stageNumber) {
               case 0: {
                 int preferredCameraId = mCameraId;
@@ -94,28 +94,31 @@ public class MyCamera {
                   mCamera = camera;
                 } catch (RuntimeException e) {
                   warning("Failed to open camera: " + d(e));
-                  return true;
+                  abort();
+                  break;
                 }
               }
-              return false;
+              break;
 
               default: {
                 trace("processCameraReceived " + nameOf(mCamera));
                 if (mCamera == null) {
                   setFailed("Opening camera");
-                  return true;
+                  abort();
+                  break;
                 }
                 // If state is unexpected, app may have shut down or something
                 if (mState != State.Opening) {
                   warning("Stale state: " + this);
                   mCamera.release();
-                  return true;
+                  abort();
+                  break;
                 }
                 constructProperties(mCamera);
                 mCamera.setDisplayOrientation(mProperties.rotation());
                 setState(State.Open);
+                finish();
               }
-              return true;
             }
           }
         };
