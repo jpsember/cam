@@ -146,20 +146,28 @@ public class PhotoFile extends Observable {
 
   public void createPhoto(final byte[] jpegData, final int rotationToApply) {
     assertOpen();
-    AppState.postBgndEvent(new Runnable() {
-      public void run() {
-        try {
-          final PhotoInfo photoInfo = backgroundThreadCreatePhoto(jpegData, rotationToApply);
-          AppState.postUIEvent(new Runnable() {
-            public void run() {
-              notifyEventObservers(Event.PhotoCreated, photoInfo);
+    TaskSequence t = new TaskSequence() {
+      private PhotoInfo mPhotoInfo;
+
+      @Override
+      protected void execute(int stageNumber) {
+        switch (stageNumber) {
+          case 0:
+            try {
+              mPhotoInfo = backgroundThreadCreatePhoto(jpegData, rotationToApply);
+            } catch (IOException e) {
+              bgndFail("create photo", e);
+              abort();
             }
-          });
-        } catch (IOException e) {
-          bgndFail("create photo", e);
+            break;
+          case 1:
+            notifyEventObservers(Event.PhotoCreated, mPhotoInfo);
+            finish();
+            break;
         }
       }
-    });
+    };
+    t.start();
   }
 
   public List<PhotoInfo> getPhotos(int startId, int maxCount) {
@@ -176,17 +184,41 @@ public class PhotoFile extends Observable {
     return list;
   }
 
+  private class GetAgedPhotoTask extends TaskSequence {
+
+    public GetAgedPhotoTask(PhotoInfo photoInfo) {
+      photoInfo.assertFrozen();
+      mPhotoInfo = photoInfo;
+    }
+
+    @Override
+    protected void execute(int stageNumber) {
+      switch (stageNumber) {
+        case 0: {
+          Bitmap bitmap = readBitmapFromFile(mPhotoInfo);
+
+          PhotoManipulator m = new PhotoManipulator(PhotoFile.this, mPhotoInfo, bitmap);
+          mAgedPhoto = m.getManipulatedBitmap();
+        }
+        break;
+        case 1:
+          notifyEventObservers(Event.BitmapConstructed, mPhotoInfo, mAgedPhoto);
+          finish();
+          break;
+      }
+    }
+
+    private Bitmap mAgedPhoto;
+    private PhotoInfo mPhotoInfo;
+  }
+
   /**
    * Construct a suitably aged bitmap for a photo
    */
-  public void getBitmap(final PhotoInfo photoInfo) {
+  public void getBitmap(PhotoInfo photoInfo) {
     assertOpen();
-    photoInfo.assertFrozen();
-    AppState.postBgndEvent(new Runnable() {
-      public void run() {
-        constructBitmap(photoInfo);
-      }
-    });
+    TaskSequence t = new GetAgedPhotoTask(photoInfo);
+    t.start();
   }
 
   private void trace(Object msg) {
@@ -423,23 +455,6 @@ public class PhotoFile extends Observable {
       }
     }
     mPhotoSet = photoSet;
-  }
-
-  /**
-   * Construct a suitably aged bitmap for a photo
-   */
-  private void constructBitmap(final PhotoInfo photoInfo) {
-    Bitmap bitmap = readBitmapFromFile(photoInfo);
-
-    PhotoManipulator m = new PhotoManipulator(this, photoInfo, bitmap);
-
-    final Bitmap finalBitmap = m.getManipulatedBitmap();
-
-    AppState.postUIEvent(new Runnable() {
-      public void run() {
-        notifyEventObservers(Event.BitmapConstructed, photoInfo, finalBitmap);
-      }
-    });
   }
 
   private Bitmap readBitmapFromFile(PhotoInfo photoInfo) {
