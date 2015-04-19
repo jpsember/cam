@@ -52,6 +52,7 @@ public class AlbumActivity extends Activity implements Observer {
 
   @Override
   protected void onResume() {
+    mResumed = true;
     trace("onResume");
     super.onResume();
     mPhotoFile.addObserver(this);
@@ -68,6 +69,7 @@ public class AlbumActivity extends Activity implements Observer {
 
   @Override
   protected void onPause() {
+    mResumed = false;
     trace("onPause");
     mPhotoFile.deleteObserver(this);
     mPhotos.clear();
@@ -153,7 +155,6 @@ public class AlbumActivity extends Activity implements Observer {
           @Override
           public void run() {
             PhotoFile.simulateDelay(250);
-            if (AlbumActivity.this.)
               // Have background thread construct thumbnail from this (full size) bitmap
               final Bitmap thumbnailBitmap = constructThumbnailFor(bitmap);
             trace("constructed thumbnail; " + BitmapTools.size(thumbnailBitmap));
@@ -173,6 +174,8 @@ public class AlbumActivity extends Activity implements Observer {
   private static final boolean LIMIT_THUMBNAIL_MAP_SIZE = true;
 
   private void receivedThumbnail(PhotoInfo photo, Bitmap thumbnailBitmap) {
+    if (!mResumed)
+      return;
     trace("storing thumbnail bitmap " + nameOf(thumbnailBitmap) + " within map, key " + photo);
     if (LIMIT_THUMBNAIL_MAP_SIZE) {
       warning("limiting size of thumbnail map");
@@ -309,6 +312,7 @@ public class AlbumActivity extends Activity implements Observer {
     return bitmap;
   }
 
+  private boolean mResumed;
   private IPoint mThumbSize;
   private boolean mTrace;
   private PhotoFile mPhotoFile;

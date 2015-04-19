@@ -85,6 +85,7 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
         final Bitmap finalBitmap = bitmap;
         AppState.postUIEvent(new Runnable() {
           public void run() {
+            if (!mResumed) return;
             mImageView.setImageBitmap(finalBitmap);
           }
         });
@@ -232,6 +233,7 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
 
   @Override
   protected void onResume() {
+    mResumed = true;
     super.onResume();
     resumeCamera();
     resumePhotoFile();
@@ -242,6 +244,7 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
     pausePhotoFile();
     pauseCamera();
     super.onPause();
+    mResumed = false;
   }
 
   private View buildImageView() {
@@ -329,4 +332,5 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
   private PhotoInfo mBitmapLoadingPhotoInfo;
   private PhotoInfo mAgePhotoInfo;
   private byte[] mAgeBitmap;
+  private boolean mResumed;
 }

@@ -45,6 +45,7 @@ public class ViewPhotoActivity extends Activity implements Observer {
 
   @Override
   protected void onResume() {
+    mResumed = true;
     super.onResume();
     mPhotoFile.addObserver(this);
     displayDesiredPhotoIfPhotosReady();
@@ -70,6 +71,7 @@ public class ViewPhotoActivity extends Activity implements Observer {
   protected void onPause() {
     mPhotoFile.deleteObserver(this);
     super.onPause();
+    mResumed = false;
   }
 
   private View buildContentView() {
@@ -104,5 +106,6 @@ public class ViewPhotoActivity extends Activity implements Observer {
   private ImageView mImageView;
   private PhotoInfo mPhotoInfo;
   private int mPhotoId;
+  private boolean mResumed;
 }
 
