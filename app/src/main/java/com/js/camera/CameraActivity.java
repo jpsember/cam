@@ -33,7 +33,7 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
     Preview, TakePhotos, PhotoManip, PhotoAger
   }
 
-  private static final Demo DEMO = Demo.PhotoAger;
+  private static final Demo DEMO = Demo.TakePhotos;
 
   @Override
   public void onCreate(Bundle savedInstanceState) {

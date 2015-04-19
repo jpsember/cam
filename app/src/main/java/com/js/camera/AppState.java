@@ -22,6 +22,9 @@ public class AppState {
     startApp(context);
     AppPreferences.prepare(context);
     sUIThreadHandler = new Handler(Looper.getMainLooper());
+    HandlerThread handlerThread = new HandlerThread("Background handler thread");
+    handlerThread.start();
+    sBgndThreadHandler = new Handler(handlerThread.getLooper());
   }
 
   private static void assertPrepared() {
@@ -41,6 +44,11 @@ public class AppState {
     sUIThreadHandler.post(r);
   }
 
+  public static void postBgndEvent(Runnable r) {
+    assertPrepared();
+    sBgndThreadHandler.post(r);
+  }
+
   private static Context context() {
     assertPrepared();
     return sContext;
@@ -51,6 +59,7 @@ public class AppState {
     sPhotoFile.open();
   }
 
+  @Deprecated
   public static Handler buildBackgroundHandler(String name) {
     HandlerThread handlerThread = new HandlerThread(name + " background handler thread");
     handlerThread.start();
@@ -61,5 +70,5 @@ public class AppState {
   private static PhotoFile sPhotoFile;
   private static Context sContext;
   private static Handler sUIThreadHandler;
-
+  private static Handler sBgndThreadHandler;
 }
