@@ -40,7 +40,7 @@ public class AlbumActivity extends Activity implements Observer {
   public void onCreate(Bundle savedInstanceState) {
     doNothingAndroid();
     AppState.prepare(this);
-//    setTrace(true);
+    setTrace(true);
 
     mPhotoFile = AppState.photoFile();
     super.onCreate(savedInstanceState);
@@ -119,6 +119,32 @@ public class AlbumActivity extends Activity implements Observer {
     v.setOnItemClickListener(new AdapterView.OnItemClickListener() {
       public void onItemClick(AdapterView<?> parent, View v,
                               int position, long id) {
+        if (true) {
+          warning("testing BackgroundTask");
+          TaskSequence t = new TaskSequence() {
+            @Override
+            protected boolean execute(int stageNumber) {
+              int auxNumber = stageNumber & 1;
+              if (stageNumber == 15)
+                return true;
+              switch (auxNumber) {
+                case 0:
+                  mString = "bgnd";
+                  break;
+                case 1:
+                  mString = "fgnd";
+                  break;
+              }
+              trace("finished stage " + stageNumber + ": " + mString);
+              return false;
+            }
+
+            private String mString;
+          };
+          t.addSimulatedDelays(300);
+          t.start();
+          return;
+        }
         trace("showing photo id " + id);
         startActivityForResult(ViewPhotoActivity.buildIntentForPhoto(AlbumActivity.this, (int) id), 0);
       }
