@@ -40,13 +40,15 @@ public abstract class TaskSequence {
    * Add simulated delays between each stage
    *
    * @param ms delay in ms
+   * @return this a convenience for chaining
    */
-  public void addSimulatedDelays(int ms) {
+  public TaskSequence addSimulatedDelays(int ms) {
     assertStarted(false);
     if (ms > 0) {
       nSleepTime = ms;
       nRandom = new Random();
     }
+    return this;
   }
 
   /**

@@ -23,8 +23,6 @@ import android.view.SurfaceHolder;
  */
 public class MyCamera {
 
-  private static final boolean SIMULATED_DELAYS = true;
-
   public interface Listener {
     /**
      * Called when the MyCamera state has changed
@@ -93,7 +91,7 @@ public class MyCamera {
             return true;
         }
       }
-    }.start();
+    }.addSimulatedDelays(300).start();
   }
 
   private void setState(State state) {
@@ -306,9 +304,6 @@ public class MyCamera {
 
   private void backgroundThreadOpenCamera() {
     trace("backgroundThreadOpenCamera");
-    if (SIMULATED_DELAYS)
-      sleepFor(1200);
-
     int preferredCameraId = mCameraId;
     Camera camera = null;
     try {
@@ -319,9 +314,6 @@ public class MyCamera {
     } catch (RuntimeException e) {
       warning("Failed to open camera: " + d(e));
     }
-
-    if (SIMULATED_DELAYS)
-      sleepFor(1200);
     mCamera = camera;
   }
 
