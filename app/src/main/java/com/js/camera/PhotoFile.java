@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Observable;
-import java.util.Random;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -33,7 +32,6 @@ import static com.js.basic.Tools.*;
  */
 public class PhotoFile extends Observable {
 
-  public static final boolean SIMULATED_DELAYS = true;
   private static final boolean WITH_ASSERTIONS = true;
   // Start with a fresh photo directory on each run?
   private static final boolean DELETE_ROOT_DIRECTORY = false;
@@ -62,13 +60,6 @@ public class PhotoFile extends Observable {
     return mState;
   }
 
-  public static void simulateDelay(int timeMS) {
-    if (!SIMULATED_DELAYS)
-      return;
-    Random r = new Random();
-    sleepFor(((int) (r.nextFloat() * .6f + .7f)) * timeMS);
-  }
-
   public void open() {
     assertUIThread();
     if (mState != State.Start)
@@ -78,11 +69,30 @@ public class PhotoFile extends Observable {
 
     setState(State.Opening);
 
-    AppState.postBgndEvent(new Runnable() {
-      public void run() {
-        backgroundThreadOpenFile();
+    TaskSequence t = new TaskSequence() {
+      @Override
+      protected void execute(int stageNumber) {
+        switch (stageNumber) {
+          case 0: {
+            trace("backgroundThreadOpenFile");
+            if (!isExternalStorageWritable()) {
+              setFailed("No writable external storage found");
+              abort();
+              break;
+            }
+            if (!prepareRootDirectory())
+              abort();
+          }
+          break;
+          case 1:
+            setState(State.Open);
+            notifyEventObservers(Event.StateChanged);
+            finish();
+            break;
+        }
       }
-    });
+    };
+    t.start();
   }
 
   public boolean isOpen() {
@@ -223,33 +233,6 @@ public class PhotoFile extends Observable {
     if (!isUIThread())
       return;
     throw new IllegalStateException("Attempt to call from non-bgnd thread " + nameOf(Thread.currentThread()));
-  }
-
-  private void backgroundThreadOpenFile() {
-    assertBgndThread();
-    trace("backgroundThreadOpenFile");
-
-    simulateDelay(1200);
-
-    do {
-
-      if (!isExternalStorageWritable()) {
-        setFailed("No writable external storage found");
-        break;
-      }
-      if (!prepareRootDirectory()) {
-        break;
-      }
-    } while (false);
-
-    simulateDelay(3000);
-
-    AppState.postUIEvent(new Runnable() {
-      public void run() {
-        setState(State.Open);
-        notifyEventObservers(Event.StateChanged);
-      }
-    });
   }
 
   private boolean prepareRootDirectory() {
