@@ -96,11 +96,26 @@ public class PhotoFile extends Observable {
       return;
 
     setState(State.Closing);
-    AppState.postBgndEvent(new Runnable() {
-      public void run() {
-        backgroundThreadCloseFile();
+    TaskSequence t = new TaskSequence() {
+      @Override
+      protected boolean execute(int stageNumber) {
+        switch (stageNumber) {
+          case 0:
+            trace("backgroundThreadCloseFile");
+            try {
+              flush();
+            } catch (IOException e) {
+              bgndFail("closing file", e);
+            }
+            return false;
+          default:
+            setState(State.Closed);
+            return true;
+        }
       }
-    });
+    };
+    t.start();
+
   }
 
   public void assertOpen() {
@@ -232,24 +247,6 @@ public class PhotoFile extends Observable {
       public void run() {
         setState(State.Open);
         notifyEventObservers(Event.StateChanged);
-      }
-    });
-  }
-
-  private void backgroundThreadCloseFile() {
-    assertBgndThread();
-
-    trace("backgroundThreadCloseFile");
-
-    try {
-      flush();
-    } catch (IOException e) {
-      bgndFail("closing file", e);
-    }
-
-    AppState.postUIEvent(new Runnable() {
-      public void run() {
-        setState(State.Closed);
       }
     });
   }
