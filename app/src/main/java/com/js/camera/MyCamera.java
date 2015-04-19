@@ -78,20 +78,49 @@ public class MyCamera {
 
     mCameraId = preferredCameraId;
     setState(State.Opening);
+    TaskSequence t =
+        new TaskSequence() {
+          @Override
+          protected boolean execute(int stageNumber) {
+            switch (stageNumber) {
+              case 0: {
+                int preferredCameraId = mCameraId;
+                Camera camera;
+                try {
+                  camera = Camera.open(preferredCameraId);
+                  Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
+                  Camera.getCameraInfo(preferredCameraId, cameraInfo);
+                  mCorrectingRotation = determineDisplayOrientation(cameraInfo);
+                  mCamera = camera;
+                } catch (RuntimeException e) {
+                  warning("Failed to open camera: " + d(e));
+                  return true;
+                }
+              }
+              return false;
 
-    new TaskSequence() {
-      @Override
-      protected boolean execute(int stageNumber) {
-        switch (stageNumber) {
-          case 0:
-            backgroundThreadOpenCamera();
-            return false;
-          default:
-            processCameraReceivedFromBackgroundThread();
-            return true;
-        }
-      }
-    }.addSimulatedDelays(300).start();
+              default: {
+                trace("processCameraReceived " + nameOf(mCamera));
+                if (mCamera == null) {
+                  setFailed("Opening camera");
+                  return true;
+                }
+                // If state is unexpected, app may have shut down or something
+                if (mState != State.Opening) {
+                  warning("Stale state: " + this);
+                  mCamera.release();
+                  return true;
+                }
+                constructProperties(mCamera);
+                mCamera.setDisplayOrientation(mProperties.rotation());
+                setState(State.Open);
+              }
+              return true;
+            }
+          }
+        };
+    t.addSimulatedDelays(300);
+    t.start();
   }
 
   private void setState(State state) {
@@ -300,39 +329,6 @@ public class MyCamera {
     setState(State.Failed);
     mFailureMessage = message;
     trace("Failed with message " + message);
-  }
-
-  private void backgroundThreadOpenCamera() {
-    trace("backgroundThreadOpenCamera");
-    int preferredCameraId = mCameraId;
-    Camera camera = null;
-    try {
-      camera = Camera.open(preferredCameraId);
-      Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
-      Camera.getCameraInfo(preferredCameraId, cameraInfo);
-      mCorrectingRotation = determineDisplayOrientation(cameraInfo);
-    } catch (RuntimeException e) {
-      warning("Failed to open camera: " + d(e));
-    }
-    mCamera = camera;
-  }
-
-  private void processCameraReceivedFromBackgroundThread() {
-    trace("processCameraReceived " + nameOf(mCamera));
-    if (mCamera == null) {
-      setFailed("Opening camera");
-      return;
-    }
-    // If state is unexpected, app may have shut down or something
-    if (mState != State.Opening) {
-      warning("Stale state: " + this);
-      mCamera.release();
-      return;
-    }
-
-    constructProperties(mCamera);
-    mCamera.setDisplayOrientation(mProperties.rotation());
-    setState(State.Open);
   }
 
   private void constructProperties(Camera camera) {
