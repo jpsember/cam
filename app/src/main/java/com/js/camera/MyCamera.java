@@ -81,16 +81,19 @@ public class MyCamera {
     mCameraId = preferredCameraId;
     setState(State.Opening);
 
-    AppState.postBgndEvent(new Runnable() {
-      public void run() {
-        mCamera = backgroundThreadOpenCamera();
-        AppState.postUIEvent(new Runnable() {
-          public void run() {
+    new TaskSequence() {
+      @Override
+      protected boolean execute(int stageNumber) {
+        switch (stageNumber) {
+          case 0:
+            backgroundThreadOpenCamera();
+            return false;
+          default:
             processCameraReceivedFromBackgroundThread();
-          }
-        });
+            return true;
+        }
       }
-    });
+    }.start();
   }
 
   private void setState(State state) {
@@ -301,7 +304,7 @@ public class MyCamera {
     trace("Failed with message " + message);
   }
 
-  private Camera backgroundThreadOpenCamera() {
+  private void backgroundThreadOpenCamera() {
     trace("backgroundThreadOpenCamera");
     if (SIMULATED_DELAYS)
       sleepFor(1200);
@@ -319,7 +322,7 @@ public class MyCamera {
 
     if (SIMULATED_DELAYS)
       sleepFor(1200);
-    return camera;
+    mCamera = camera;
   }
 
   private void processCameraReceivedFromBackgroundThread() {

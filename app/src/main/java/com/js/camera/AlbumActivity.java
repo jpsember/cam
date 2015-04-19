@@ -156,7 +156,7 @@ public class AlbumActivity extends Activity implements Observer {
   }
 
   private class BuildThumbnailTask extends TaskSequence {
-    
+
     public BuildThumbnailTask(PhotoInfo photo, Bitmap originalBitmap) {
       mPhoto = photo;
       mOriginalBitmap = originalBitmap;
