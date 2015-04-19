@@ -59,7 +59,7 @@ public class PhotoFile extends Observable {
     return mState;
   }
 
-  private class OpenCameraTask extends TaskSequence {
+  private class OpenPhotoFileTask extends TaskSequence {
     @Override
     protected void execute(int stageNumber) {
       switch (stageNumber) {
@@ -174,7 +174,7 @@ public class PhotoFile extends Observable {
 
     setState(State.Opening);
 
-    TaskSequence t = new OpenCameraTask();
+    TaskSequence t = new OpenPhotoFileTask();
     t.start();
   }
 
@@ -182,7 +182,7 @@ public class PhotoFile extends Observable {
     return mState == State.Open;
   }
 
-  private class CloseCameraTask extends TaskSequence {
+  private class ClosePhotoFileTask extends TaskSequence {
     @Override
     protected void execute(int stageNumber) {
       switch (stageNumber) {
@@ -217,7 +217,7 @@ public class PhotoFile extends Observable {
       return;
 
     setState(State.Closing);
-    TaskSequence t = new CloseCameraTask();
+    TaskSequence t = new ClosePhotoFileTask();
     t.start();
   }
 
