@@ -2,7 +2,6 @@ package com.js.camera;
 
 import android.app.Activity;
 import android.hardware.Camera;
-import android.os.Handler;
 import android.view.Surface;
 
 import com.js.basic.Freezable;
@@ -59,8 +58,6 @@ public class MyCamera {
 
     trace("open()");
 
-    mBackgroundThreadHandler = AppState.buildBackgroundHandler("MyCamera");
-
     // Find preferred facing; if not found, use first camera
     int PREFERRED_FACING = Camera.CameraInfo.CAMERA_FACING_BACK;
 
@@ -84,7 +81,7 @@ public class MyCamera {
     mCameraId = preferredCameraId;
     setState(State.Opening);
 
-    mBackgroundThreadHandler.post(new Runnable() {
+    AppState.postBgndEvent(new Runnable() {
       public void run() {
         mCamera = backgroundThreadOpenCamera();
         AppState.postUIEvent(new Runnable() {
@@ -382,7 +379,6 @@ public class MyCamera {
   private Listener mListener;
   private boolean mPreviewStarted;
   private Camera.PreviewCallback mPreviewCallback;
-  private Handler mBackgroundThreadHandler;
   private Properties mProperties;
 
   /**

@@ -4,7 +4,6 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Environment;
-import android.os.Handler;
 
 import com.js.basic.Files;
 import com.js.basic.JSONTools;
@@ -77,11 +76,9 @@ public class PhotoFile extends Observable {
 
     trace("open()");
 
-    mBackgroundThreadHandler = AppState.buildBackgroundHandler("PhotoFile");
-
     setState(State.Opening);
 
-    mBackgroundThreadHandler.post(new Runnable() {
+    AppState.postBgndEvent(new Runnable() {
       public void run() {
         backgroundThreadOpenFile();
       }
@@ -99,7 +96,7 @@ public class PhotoFile extends Observable {
       return;
 
     setState(State.Closing);
-    mBackgroundThreadHandler.post(new Runnable() {
+    AppState.postBgndEvent(new Runnable() {
       public void run() {
         backgroundThreadCloseFile();
       }
@@ -123,7 +120,7 @@ public class PhotoFile extends Observable {
 
   public void createPhoto(final byte[] jpegData, final int rotationToApply) {
     assertOpen();
-    mBackgroundThreadHandler.post(new Runnable() {
+    AppState.postBgndEvent(new Runnable() {
       public void run() {
         try {
           final PhotoInfo photoInfo = backgroundThreadCreatePhoto(jpegData, rotationToApply);
@@ -159,7 +156,7 @@ public class PhotoFile extends Observable {
   public void getBitmap(final PhotoInfo photoInfo) {
     assertOpen();
     photoInfo.assertFrozen();
-    mBackgroundThreadHandler.post(new Runnable() {
+    AppState.postBgndEvent(new Runnable() {
       public void run() {
         constructBitmap(photoInfo);
       }
@@ -494,7 +491,6 @@ public class PhotoFile extends Observable {
   private State mState;
   private String mFailureMessage;
   private final Context mContext;
-  private Handler mBackgroundThreadHandler;
   // This is a constant once the file has been created, so thread doesn't matter
   private int mRandomSeed;
 

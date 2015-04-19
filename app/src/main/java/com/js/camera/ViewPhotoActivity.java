@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.os.Handler;
 import android.view.View;
 import android.widget.ImageView;
 
@@ -102,7 +101,6 @@ public class ViewPhotoActivity extends Activity implements Observer {
   }
 
   private PhotoFile mPhotoFile;
-  //  private Handler mBackgroundThreadHandler;
   private ImageView mImageView;
   private PhotoInfo mPhotoInfo;
   private int mPhotoId;

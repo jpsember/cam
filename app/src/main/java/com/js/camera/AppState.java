@@ -59,14 +59,6 @@ public class AppState {
     sPhotoFile.open();
   }
 
-  @Deprecated
-  public static Handler buildBackgroundHandler(String name) {
-    HandlerThread handlerThread = new HandlerThread(name + " background handler thread");
-    handlerThread.start();
-    Handler handler = new Handler(handlerThread.getLooper());
-    return handler;
-  }
-
   private static PhotoFile sPhotoFile;
   private static Context sContext;
   private static Handler sUIThreadHandler;

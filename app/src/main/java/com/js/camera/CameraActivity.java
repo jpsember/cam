@@ -311,7 +311,7 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
           warning("no bitmap for " + photoInfo);
           return;
         }
-        if (photoInfo.getId() != mBitmapLoadingPhotoInfo.getId()) {
+        if (mBitmapLoadingPhotoInfo == null || photoInfo.getId() != mBitmapLoadingPhotoInfo.getId()) {
           warning("bitmap is stale:" + photoInfo);
           return;
         }

@@ -7,7 +7,6 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.os.Bundle;
-import android.os.Handler;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -18,7 +17,6 @@ import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
-import android.widget.Toast;
 
 import com.js.basic.IPoint;
 import com.js.camera.camera.R;
@@ -42,10 +40,9 @@ public class AlbumActivity extends Activity implements Observer {
   public void onCreate(Bundle savedInstanceState) {
     doNothingAndroid();
     AppState.prepare(this);
-    setTrace(true);
+//    setTrace(true);
 
     mPhotoFile = AppState.photoFile();
-    mBackgroundThreadHandler = AppState.buildBackgroundHandler("AlbumActivity");
     super.onCreate(savedInstanceState);
     setContentView(buildContentView());
   }
@@ -151,12 +148,13 @@ public class AlbumActivity extends Activity implements Observer {
         if (mPhotoIdToThumbnailBitmapMap.containsKey(photo.getId())) {
           throw new IllegalStateException("thumbnail already exists");
         }
-        mBackgroundThreadHandler.post(new Runnable() {
+
+        AppState.postBgndEvent(new Runnable() {
           @Override
           public void run() {
             PhotoFile.simulateDelay(250);
-              // Have background thread construct thumbnail from this (full size) bitmap
-              final Bitmap thumbnailBitmap = constructThumbnailFor(bitmap);
+            // Have background thread construct thumbnail from this (full size) bitmap
+            final Bitmap thumbnailBitmap = constructThumbnailFor(bitmap);
             trace("constructed thumbnail; " + BitmapTools.size(thumbnailBitmap));
             AppState.postUIEvent(new Runnable() {
               @Override
@@ -319,6 +317,5 @@ public class AlbumActivity extends Activity implements Observer {
   private GridView mGridView;
   private List<PhotoInfo> mPhotos = new ArrayList();
   private Map<Integer, Bitmap> mPhotoIdToThumbnailBitmapMap = new HashMap();
-  private Handler mBackgroundThreadHandler;
   private Set<Integer> mThumbnailRequestedSet = new HashSet();
 }
