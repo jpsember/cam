@@ -137,8 +137,8 @@ public class AlbumActivity extends Activity implements Observer {
         rebuildAlbumIfPhotosAvailable();
         break;
       case BitmapConstructed: {
-        final PhotoInfo photo = (PhotoInfo) params[1];
-        final Bitmap bitmap = (Bitmap) params[2];
+        PhotoInfo photo = (PhotoInfo) params[1];
+        Bitmap bitmap = (Bitmap) params[2];
         trace("BitmapConstructed for " + photo + ": " + bitmap);
         // If we're not constructing a thumbnail, ignore
         if (!mThumbnailRequestedSet.contains(photo.getId())) {
@@ -148,74 +148,90 @@ public class AlbumActivity extends Activity implements Observer {
         if (mPhotoIdToThumbnailBitmapMap.containsKey(photo.getId())) {
           throw new IllegalStateException("thumbnail already exists");
         }
-
-        AppState.postBgndEvent(new Runnable() {
-          @Override
-          public void run() {
-            PhotoFile.simulateDelay(250);
-            // Have background thread construct thumbnail from this (full size) bitmap
-            final Bitmap thumbnailBitmap = constructThumbnailFor(bitmap);
-            trace("constructed thumbnail; " + BitmapTools.size(thumbnailBitmap));
-            AppState.postUIEvent(new Runnable() {
-              @Override
-              public void run() {
-                receivedThumbnail(photo, thumbnailBitmap);
-              }
-            });
-          }
-        });
+        // Start a new TaskSequence to build and deal with thumbnail
+        new BuildThumbnailTask(photo, bitmap).start();
       }
       break;
     }
   }
 
+  private class BuildThumbnailTask extends TaskSequence {
+    
+    public BuildThumbnailTask(PhotoInfo photo, Bitmap originalBitmap) {
+      mPhoto = photo;
+      mOriginalBitmap = originalBitmap;
+    }
+
+    @Override
+    protected boolean execute(int stageNumber) {
+      if (!mResumed)
+        return true;
+      switch (stageNumber) {
+        case 0:
+          constructThumbnail();
+          break;
+        case 1:
+          receivedThumbnail();
+          return true;
+      }
+      return false;
+    }
+
+    private void constructThumbnail() {
+      Bitmap bitmap = mOriginalBitmap;
+      assertBgndThread();
+      int origWidth = (int) (bitmap.getWidth() * .8f);
+      int origHeight = (int) (bitmap.getHeight() * .8f);
+      int origSize = Math.min(origWidth, origHeight);
+      float scaleFactor = mThumbSize.x / (float) origSize;
+      Matrix m = new Matrix();
+
+      m.postScale(scaleFactor, scaleFactor);
+      mThumbnailBitmap = Bitmap.createBitmap(bitmap,
+          (bitmap.getWidth() - origSize) / 2, (bitmap.getHeight() - origSize) / 2,
+          origSize, origSize, m, true);
+    }
+
+    private void receivedThumbnail() {
+      trace("storing thumbnail bitmap " + nameOf(mThumbnailBitmap)
+          + " within map, key " + mPhoto);
+      if (LIMIT_THUMBNAIL_MAP_SIZE)
+
+      {
+        warning("limiting size of thumbnail map");
+        List<Integer> keys = new ArrayList<Integer>();
+        keys.addAll(mPhotoIdToThumbnailBitmapMap.keySet());
+        Random r = new Random();
+        while (mPhotoIdToThumbnailBitmapMap.size() >= 6) {
+          int ind = r.nextInt(keys.size());
+          mPhotoIdToThumbnailBitmapMap.remove(keys.get(ind));
+        }
+      }
+
+      mPhotoIdToThumbnailBitmapMap.put(mPhoto.getId(), mThumbnailBitmap);
+
+      int start = mGridView.getFirstVisiblePosition();
+      for (
+          int i = start, j = mGridView.getLastVisiblePosition();
+          i <= j; i++) {
+        PhotoInfo itemPhoto = (PhotoInfo) mGridView.getItemAtPosition(i);
+        if (mPhoto.getId() == itemPhoto.getId()) {
+          View view = mGridView.getChildAt(i - start);
+          mGridView.getAdapter().getView(i, view, mGridView);
+          break;
+        }
+      }
+      // We're no longer requesting a thumbnail for this photo
+      mThumbnailRequestedSet.remove(mPhoto.getId());
+      trace("thumbnail requested set now " + d(mThumbnailRequestedSet, false));
+    }
+
+    private PhotoInfo mPhoto;
+    private Bitmap mOriginalBitmap;
+    private Bitmap mThumbnailBitmap;
+  }
+
   private static final boolean LIMIT_THUMBNAIL_MAP_SIZE = true;
-
-  private void receivedThumbnail(PhotoInfo photo, Bitmap thumbnailBitmap) {
-    if (!mResumed)
-      return;
-    trace("storing thumbnail bitmap " + nameOf(thumbnailBitmap) + " within map, key " + photo);
-    if (LIMIT_THUMBNAIL_MAP_SIZE) {
-      warning("limiting size of thumbnail map");
-      List<Integer> keys = new ArrayList<Integer>();
-      keys.addAll(mPhotoIdToThumbnailBitmapMap.keySet());
-      Random r = new Random();
-      while (mPhotoIdToThumbnailBitmapMap.size() >= 6) {
-        int ind = r.nextInt(keys.size());
-        mPhotoIdToThumbnailBitmapMap.remove(keys.get(ind));
-      }
-    }
-    mPhotoIdToThumbnailBitmapMap.put(photo.getId(), thumbnailBitmap);
-
-    int start = mGridView.getFirstVisiblePosition();
-    for (int i = start, j = mGridView.getLastVisiblePosition(); i <= j; i++) {
-      PhotoInfo itemPhoto = (PhotoInfo) mGridView.getItemAtPosition(i);
-      if (photo.getId() == itemPhoto.getId()) {
-        View view = mGridView.getChildAt(i - start);
-        mGridView.getAdapter().getView(i, view, mGridView);
-        break;
-      }
-    }
-    // We're no longer requesting a thumbnail for this photo
-    mThumbnailRequestedSet.remove(photo.getId());
-
-    trace("thumbnail requested set now " + d(mThumbnailRequestedSet, false));
-  }
-
-  private Bitmap constructThumbnailFor(Bitmap bitmap) {
-    assertBgndThread();
-    int origWidth = (int) (bitmap.getWidth() * .8f);
-    int origHeight = (int) (bitmap.getHeight() * .8f);
-    int origSize = Math.min(origWidth, origHeight);
-    float scaleFactor = mThumbSize.x / (float) origSize;
-    Matrix m = new Matrix();
-
-    m.postScale(scaleFactor, scaleFactor);
-    Bitmap thumbnail = Bitmap.createBitmap(bitmap,
-        (bitmap.getWidth() - origSize) / 2, (bitmap.getHeight() - origSize) / 2,
-        origSize, origSize, m, true);
-    return thumbnail;
-  }
 
   private void assertBgndThread() {
     if (!isUIThread())
@@ -287,6 +303,7 @@ public class AlbumActivity extends Activity implements Observer {
       }
       return imageView;
     }
+
   }
 
   public void setTrace(boolean state) {
