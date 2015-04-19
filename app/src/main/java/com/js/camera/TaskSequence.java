@@ -18,8 +18,6 @@ import static com.js.basic.Tools.*;
  */
 public abstract class TaskSequence {
 
-  private final int MAX_STAGES = 100;
-
   /**
    * Start the sequence of tasks
    */
@@ -72,6 +70,7 @@ public abstract class TaskSequence {
   }
 
   private void startNextStage() {
+    final int MAX_STAGES = 100;
     if (nStage == MAX_STAGES)
       throw new IllegalStateException("runaway task");
     if (nStage % 2 == 0)
@@ -81,6 +80,7 @@ public abstract class TaskSequence {
   }
 
   private void runAux() {
+    // Do a delay if simulated delay specified
     if (nRandom != null) {
       float f = (nRandom.nextFloat() * .8f) + .6f;
       int delay = (int) (f * nSleepTime);
@@ -93,12 +93,8 @@ public abstract class TaskSequence {
     startNextStage();
   }
 
-  private boolean started() {
-    return nState != State.WAITING;
-  }
-
   private void assertStarted(boolean started) {
-    if (started() != started)
+    if (nState.equals(State.STARTED) != started)
       throw new IllegalStateException();
   }
 
@@ -115,9 +111,10 @@ public abstract class TaskSequence {
     nState = state;
   }
 
+  private State nState = State.WAITING;
   private Runnable nRunnable;
   private int nStage;
+  // Only used if a simulated delay has been specified:
   private Random nRandom;
   private int nSleepTime;
-  private State nState = State.WAITING;
 }
