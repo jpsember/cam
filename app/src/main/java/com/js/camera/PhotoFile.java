@@ -39,10 +39,12 @@ public class PhotoFile extends Observable {
   private static final boolean KEEP_ORIGINAL_COPIES = true;
 
   // For development purposes, start with unaged versions
-  private static final boolean START_WITH_ORIGINAL = true;
+  private static final boolean START_WITH_ORIGINAL = false;
 
   // Prefix used for (development only) original copies of bitmap, info files
   private static final String ORIGINAL_COPY_PREFIX = "_orig_";
+
+  private static final int PHOTO_LIFETIME_DAYS = 30;
 
   public static enum Event {
     StateChanged,
@@ -142,6 +144,43 @@ public class PhotoFile extends Observable {
       }
     }
 
+    private void restoreOriginalVersions() {
+      File[] fList = mRootDirectory.listFiles();
+      for (File file : fList) {
+        if (!file.isFile()) continue;
+        String fileStr = file.getName();
+        String extension = FilenameUtils.getExtension(fileStr);
+        pr("restore original, file " + file + ", extension " + extension);
+        if (!extension.equals("jpg"))
+          continue;
+        String baseName = FilenameUtils.getBaseName(fileStr);
+        if (!baseName.startsWith(ORIGINAL_COPY_PREFIX))
+          continue;
+        baseName = baseName.substring(ORIGINAL_COPY_PREFIX.length());
+        int id;
+        try {
+          id = Integer.parseInt(baseName);
+        } catch (NumberFormatException e) {
+          warning("failed to parse id from " + fileStr);
+          continue;
+        }
+        try {
+          File photoInfoPathOriginal = getPhotoInfoPath(id, true);
+          File photoInfoPath = getPhotoInfoPath(id, false);
+          File photoBitmapPath = getPhotoBitmapPath(id, false);
+          if (!photoInfoPathOriginal.exists()) {
+            warning("no original path found: " + photoInfoPathOriginal);
+            continue;
+          }
+          FileUtils.copyFile(getPhotoBitmapPath(id, true), photoBitmapPath);
+          FileUtils.copyFile(photoInfoPathOriginal, photoInfoPath);
+        } catch (Throwable t) {
+          warning("Failed to read or parse " + file);
+          continue;
+        }
+      }
+    }
+
     private void readPhotoRecords() {
       SortedSet<PhotoInfo> photoSet = new TreeSet<PhotoInfo>(new Comparator<PhotoInfo>() {
         @Override
@@ -151,6 +190,10 @@ public class PhotoFile extends Observable {
       });
 
       File[] fList = mRootDirectory.listFiles();
+      if (START_WITH_ORIGINAL) {
+        restoreOriginalVersions();
+      }
+
       for (File file : fList) {
         if (file.isFile()) {
           String fileStr = file.getName();
@@ -168,13 +211,11 @@ public class PhotoFile extends Observable {
           }
           PhotoInfo photoInfo;
           try {
-            File photoInfoPath = getPhotoInfoPath(id);
+            File photoInfoPath = getPhotoInfoPath(id, false);
             String jsonString = Files.readString(photoInfoPath);
             photoInfo = PhotoInfo.parseJSON(jsonString);
             if (KEEP_ORIGINAL_COPIES)
               createOriginalIfNecessary(photoInfo);
-            if (START_WITH_ORIGINAL)
-              photoInfo = restoreOriginalPhoto(photoInfo);
           } catch (Throwable t) {
             warning("Failed to read or parse " + file);
             continue;
@@ -187,7 +228,6 @@ public class PhotoFile extends Observable {
 
     private void updatePhotoAges() {
 
-      final int PHOTO_LIFETIME_DAYS = 30;
       final int SECONDS_PER_DAY = 24 * 3600;
       final int SECONDS_PER_AGE_STATE = (PHOTO_LIFETIME_DAYS * SECONDS_PER_DAY) / PhotoInfo.AGE_STATE_MAX;
 
@@ -197,34 +237,36 @@ public class PhotoFile extends Observable {
         int timeSinceCreated = currentTime - photo.getCreationTime();
         if (timeSinceCreated < 0)
           timeSinceCreated = 0;
-        int targetAge = Math.min(timeSinceCreated / SECONDS_PER_AGE_STATE, PhotoInfo.AGE_STATE_MAX - 1);
-        trace(photo + " days since created " + (timeSinceCreated / SECONDS_PER_DAY)
-            + " new target " + targetAge + " currently " + photo.getTargetAgeState());
-        if (targetAge > photo.getTargetAgeState()) {
-          photo = mutableCopyOf(photo);
-          photo.setTargetAgeState(targetAge);
-          trace("updating");
-          photo.freeze();
-          try {
-            writePhotoInfo(photo);
-          } catch (IOException e) {
-            mFailMessage = "writing photo info; " + d(e);
-            return;
+        int targetAge = Math.min(timeSinceCreated / SECONDS_PER_AGE_STATE, PhotoInfo.AGE_STATE_MAX);
+        if (targetAge != photo.getTargetAgeState()) {
+          trace(photo + " days since created " + (timeSinceCreated / SECONDS_PER_DAY)
+              + " new target " + targetAge + " currently " + photo.getTargetAgeState());
+
+          if (targetAge == PhotoInfo.AGE_STATE_MAX) {
+            File f = getPhotoInfoPath(photo.getId(), false);
+            f.delete();
+            f = getPhotoBitmapPath(photo.getId(), false);
+            f.delete();
+            continue;
+          }
+
+          if (targetAge > photo.getTargetAgeState()) {
+            photo = mutableCopyOf(photo);
+            photo.setTargetAgeState(targetAge);
+            trace("updating");
+            photo.freeze();
+            try {
+              writePhotoInfo(photo);
+            } catch (IOException e) {
+              mFailMessage = "writing photo info; " + d(e);
+              return;
+            }
           }
         }
         updatedPhotosList.add(photo);
       }
       mPhotoSet.clear();
       mPhotoSet.addAll(updatedPhotosList);
-    }
-
-    private PhotoInfo restoreOriginalPhoto(PhotoInfo photoInfo) {
-      warning("Restoring original photo(s)");
-      photoInfo = mutable(photoInfo);
-      photoInfo.setCurrentAgeState(0);
-      photoInfo.freeze();
-      createOriginalIfNecessary(photoInfo);
-      return photoInfo;
     }
 
     private String mFailMessage;
@@ -317,7 +359,7 @@ public class PhotoFile extends Observable {
               // Scale photo to size appropriate to starting state
               unimp("scale photo to starting state");
 
-              File photoPath = getPhotoBitmapPath(info.getId());
+              File photoPath = getPhotoBitmapPath(info.getId(), false);
               trace("Writing " + info + " to " + photoPath);
               OutputStream stream = new FileOutputStream(photoPath);
               bitmap.compress(Bitmap.CompressFormat.JPEG, PhotoInfo.JPEG_QUALITY_MAX, stream);
@@ -386,7 +428,7 @@ public class PhotoFile extends Observable {
     }
 
     private Bitmap readBitmapFromFile() {
-      File photoPath = getPhotoBitmapPath(mPhotoInfo.getId());
+      File photoPath = getPhotoBitmapPath(mPhotoInfo.getId(), false);
       // Cut down on logging noise by omitting this:
       //trace("Reading " + mPhotoInfo + " bitmap from " + photoPath.getName());
       Bitmap bitmap = BitmapFactory.decodeFile(photoPath.getPath());
@@ -400,7 +442,7 @@ public class PhotoFile extends Observable {
       agedPhoto.freeze();
 
       // Read current bitmap as JPEG
-      File photoPath = getPhotoBitmapPath(mPhotoInfo.getId());
+      File photoPath = getPhotoBitmapPath(mPhotoInfo.getId(), false);
       try {
         byte[] jpeg = FileUtils.readFileToByteArray(photoPath);
         PhotoAger ager = new PhotoAger(agedPhoto, jpeg);
@@ -510,7 +552,7 @@ public class PhotoFile extends Observable {
   }
 
   private void writePhotoInfo(PhotoInfo info) throws IOException {
-    File path = getPhotoInfoPath(info.getId());
+    File path = getPhotoInfoPath(info.getId(), false);
     String content = info.toJSON();
     Files.writeString(path, content);
     trace("writing " + info);
@@ -526,14 +568,18 @@ public class PhotoFile extends Observable {
     return id;
   }
 
-  private File getPhotoBitmapPath(int photoId) {
+  private File getPhotoBitmapPath(int photoId, boolean backup) {
     assertBgndThread();
-    return new File(mRootDirectory, "" + photoId + ".jpg");
+    String prefix = backup ? ORIGINAL_COPY_PREFIX : "";
+    String ext = ".jpg";
+    return new File(mRootDirectory, prefix + photoId + ext);
   }
 
-  private File getPhotoInfoPath(int photoId) {
+  private File getPhotoInfoPath(int photoId, boolean backup) {
     assertBgndThread();
-    return new File(mRootDirectory, "" + photoId + ".json");
+    String prefix = backup ? ORIGINAL_COPY_PREFIX : "";
+    String ext = backup ? ".orig_json" : ".json";
+    return new File(mRootDirectory, prefix + photoId + ext);
   }
 
   public int getRandomSeed() {
@@ -556,11 +602,10 @@ public class PhotoFile extends Observable {
   }
 
   private void createOriginalIfNecessary(PhotoInfo info) {
-    warning("creating original copy of photo(s)");
-
-    File originalInfoPath = new File(mRootDirectory, ORIGINAL_COPY_PREFIX + info.getId() + ".orig_json");
-    File infoPath = getPhotoInfoPath(info.getId());
+    File originalInfoPath = getPhotoInfoPath(info.getId(), true);
+    File infoPath = getPhotoInfoPath(info.getId(), false);
     if (infoPath.exists() && !originalInfoPath.exists()) {
+      warning("creating original copy of photo(s)");
       try {
         trace("...creating (unaged) copy of " + infoPath + " to " + originalInfoPath);
         FileUtils.copyFile(infoPath, originalInfoPath);
@@ -569,8 +614,8 @@ public class PhotoFile extends Observable {
       }
     }
 
-    File photoPath = getPhotoBitmapPath(info.getId());
-    File originalPhotoPath = new File(mRootDirectory, ORIGINAL_COPY_PREFIX + info.getId() + ".jpg");
+    File photoPath = getPhotoBitmapPath(info.getId(), false);
+    File originalPhotoPath = getPhotoBitmapPath(info.getId(), true);
     if (photoPath.exists() && !originalPhotoPath.exists()) {
       try {
         trace("...creating (unaged) copy of " + photoPath + " to " + originalPhotoPath);

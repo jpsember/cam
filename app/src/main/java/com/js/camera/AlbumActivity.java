@@ -104,7 +104,7 @@ public class AlbumActivity extends Activity implements Observer {
 
   public GridView buildGridView() {
     GridView v = new GridView(this);
-    v.setBackgroundColor(Color.GREEN);
+//    v.setBackgroundColor(Color.GREEN);
     unimp("use density pixels throughout");
     int spacing = 5;
     mThumbSize = new IPoint(350 - spacing, 350 - spacing);
