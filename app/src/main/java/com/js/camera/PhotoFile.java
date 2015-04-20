@@ -173,7 +173,8 @@ public class PhotoFile extends Observable {
     private void updatePhotoAges() {
 
       final int PHOTO_LIFETIME_DAYS = 30;
-      final int SECONDS_PER_AGE_STATE = (PHOTO_LIFETIME_DAYS * 24 * 3600) / PhotoInfo.AGE_STATE_MAX;
+      final int SECONDS_PER_DAY = 24 * 3600;
+      final int SECONDS_PER_AGE_STATE = (PHOTO_LIFETIME_DAYS * SECONDS_PER_DAY) / PhotoInfo.AGE_STATE_MAX;
 
       List<PhotoInfo> updatedPhotosList = new ArrayList<PhotoInfo>();
       int currentTime = PhotoInfo.currentSecondsSinceEpoch();
@@ -182,7 +183,7 @@ public class PhotoFile extends Observable {
         if (timeSinceCreated < 0)
           timeSinceCreated = 0;
         int targetAge = Math.min(timeSinceCreated / SECONDS_PER_AGE_STATE, PhotoInfo.AGE_STATE_MAX - 1);
-        trace(photo + " days since created " + (timeSinceCreated / (3600 * 24))
+        trace(photo + " days since created " + (timeSinceCreated / SECONDS_PER_DAY)
             + " new target " + targetAge + " currently " + photo.getTargetAgeState());
         if (targetAge > photo.getTargetAgeState()) {
           photo = mutableCopyOf(photo);

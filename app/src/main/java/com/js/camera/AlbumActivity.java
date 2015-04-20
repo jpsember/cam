@@ -197,14 +197,12 @@ public class AlbumActivity extends Activity implements Observer {
     private void receivedThumbnail() {
       trace("storing thumbnail bitmap " + nameOf(mThumbnailBitmap)
           + " within map, key " + mPhoto);
-      if (LIMIT_THUMBNAIL_MAP_SIZE)
-
-      {
-        warning("limiting size of thumbnail map");
+      if (MAX_THUMBNAIL_MAP_SIZE > 0) {
+        warning("limiting size of thumbnail map to " + MAX_THUMBNAIL_MAP_SIZE);
         List<Integer> keys = new ArrayList<Integer>();
         keys.addAll(mPhotoIdToThumbnailBitmapMap.keySet());
         Random r = new Random();
-        while (mPhotoIdToThumbnailBitmapMap.size() >= 6) {
+        while (mPhotoIdToThumbnailBitmapMap.size() > MAX_THUMBNAIL_MAP_SIZE) {
           int ind = r.nextInt(keys.size());
           mPhotoIdToThumbnailBitmapMap.remove(keys.get(ind));
         }
@@ -233,7 +231,7 @@ public class AlbumActivity extends Activity implements Observer {
     private Bitmap mThumbnailBitmap;
   }
 
-  private static final boolean LIMIT_THUMBNAIL_MAP_SIZE = true;
+  private static final int MAX_THUMBNAIL_MAP_SIZE = 20;
 
   private void assertBgndThread() {
     if (!isUIThread())
