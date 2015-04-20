@@ -44,9 +44,13 @@ public class PhotoInfo extends Freezable.Mutable {
   private PhotoInfo() {
   }
 
+  public static int currentSecondsSinceEpoch() {
+    return  (int) (System.currentTimeMillis() / 1000);
+  }
+
   public static PhotoInfo create() {
     PhotoInfo p = new PhotoInfo();
-    p.setCreationTime((int) (System.currentTimeMillis() / 1000));
+    p.setCreationTime(currentSecondsSinceEpoch());
     return p;
   }
 

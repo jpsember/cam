@@ -71,6 +71,7 @@ public class PhotoFile extends Observable {
           }
           prepareRootDirectory();
           readPhotoRecords();
+          updatePhotoAges();
         }
         break;
 
@@ -160,6 +161,13 @@ public class PhotoFile extends Observable {
         }
       }
       mPhotoSet = photoSet;
+    }
+
+    private void updatePhotoAges() {
+      int currentTime = PhotoInfo.currentSecondsSinceEpoch();
+      for (PhotoInfo photo : mPhotoSet) {
+        unimp("update "+photo+" for time "+currentTime);
+      }
     }
 
     private String mFailMessage;
