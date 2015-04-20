@@ -46,7 +46,7 @@ public class PhotoFile extends Observable {
       throw new IllegalArgumentException();
     mContext = context;
     mState = State.Start;
-//    setTrace(true);
+    setTrace(true);
     doNothing();
     doNothingAndroid();
   }
@@ -67,16 +67,19 @@ public class PhotoFile extends Observable {
           trace("OpenFile");
           if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
             mFailMessage = "No writable external storage found";
-            break;
           }
+          if (failure()) break;
           prepareRootDirectory();
+          if (failure()) break;
           readPhotoRecords();
+          if (failure()) break;
           updatePhotoAges();
+          if (failure()) break;
         }
         break;
 
         case 1:
-          if (mFailMessage != null) {
+          if (failure()) {
             setFailed(mFailMessage);
             abort();
           }
@@ -85,6 +88,10 @@ public class PhotoFile extends Observable {
           finish();
           break;
       }
+    }
+
+    private boolean failure() {
+      return mFailMessage != null;
     }
 
     private void prepareRootDirectory() {
@@ -164,10 +171,35 @@ public class PhotoFile extends Observable {
     }
 
     private void updatePhotoAges() {
+
+      final int PHOTO_LIFETIME_DAYS = 30;
+      final int SECONDS_PER_AGE_STATE = (PHOTO_LIFETIME_DAYS * 24 * 3600) / PhotoInfo.AGE_STATE_MAX;
+
+      List<PhotoInfo> updatedPhotosList = new ArrayList<PhotoInfo>();
       int currentTime = PhotoInfo.currentSecondsSinceEpoch();
       for (PhotoInfo photo : mPhotoSet) {
-        unimp("update "+photo+" for time "+currentTime);
+        int timeSinceCreated = currentTime - photo.getCreationTime();
+        if (timeSinceCreated < 0)
+          timeSinceCreated = 0;
+        int targetAge = Math.min(timeSinceCreated / SECONDS_PER_AGE_STATE, PhotoInfo.AGE_STATE_MAX - 1);
+        trace(photo + " days since created " + (timeSinceCreated / (3600 * 24))
+            + " new target " + targetAge + " currently " + photo.getTargetAgeState());
+        if (targetAge > photo.getTargetAgeState()) {
+          photo = mutableCopyOf(photo);
+          photo.setTargetAgeState(targetAge);
+          trace("updating");
+          photo.freeze();
+          try {
+            writePhotoInfo(photo);
+          } catch (IOException e) {
+            mFailMessage = "writing photo info; " + d(e);
+            return;
+          }
+        }
+        updatedPhotosList.add(photo);
       }
+      mPhotoSet.clear();
+      mPhotoSet.addAll(updatedPhotosList);
     }
 
     private String mFailMessage;
@@ -410,10 +442,7 @@ public class PhotoFile extends Observable {
     info.freeze();
 
     // Write photo info to file, and store in map
-    File path = getPhotoInfoPath(info.getId());
-    String content = info.toJSON();
-    Files.writeString(path, content);
-    trace("writing " + info + " to " + path + ", content=<" + content + ">");
+    writePhotoInfo(info);
 
     synchronized (mPhotoSet) {
       mPhotoSet.add(info);
@@ -422,6 +451,13 @@ public class PhotoFile extends Observable {
     // Flush the changes, i.e. the unique id
     flush();
     return info;
+  }
+
+  private void writePhotoInfo(PhotoInfo info) throws IOException {
+    File path = getPhotoInfoPath(info.getId());
+    String content = info.toJSON();
+    Files.writeString(path, content);
+    trace("writing " + info + " to " + path + ", content=<" + content + ">");
   }
 
   private int getUniquePhotoId() {
