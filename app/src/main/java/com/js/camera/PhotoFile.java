@@ -64,12 +64,13 @@ public class PhotoFile extends Observable {
     protected void execute(int stageNumber) {
       switch (stageNumber) {
         case 0: {
-          trace("backgroundThreadOpenFile");
+          trace("OpenFile");
           if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
             mFailMessage = "No writable external storage found";
             break;
           }
           prepareRootDirectory();
+          readPhotoRecords();
         }
         break;
 
@@ -103,7 +104,6 @@ public class PhotoFile extends Observable {
           }
           readFileState();
         }
-        readPhotoRecords();
         trace("Opened root directory " + mRootDirectory);
       } catch (IOException e) {
         mFailMessage = "preparing root; " + d(e);
@@ -187,7 +187,7 @@ public class PhotoFile extends Observable {
     protected void execute(int stageNumber) {
       switch (stageNumber) {
         case 0: {
-          trace("backgroundThreadCloseFile");
+          trace("CloseFile");
           try {
             flush();
           } catch (IOException e) {

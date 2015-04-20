@@ -32,7 +32,6 @@ public class ViewPhotoActivity extends Activity implements Observer {
     AppState.prepare(this);
 
     mPhotoFile = AppState.photoFile();
-//    mBackgroundThreadHandler = AppState.buildBackgroundHandler("ViewPhotoActivity");
     Bundle b = getIntent().getExtras();
     if (b == null) throw new IllegalArgumentException();
     mPhotoId = b.getInt(PHOTO_ID_KEY);
