@@ -17,11 +17,10 @@ import static com.js.android.AndroidTools.*;
 public class AppState {
 
   public static void prepare(Context context) {
-    if (sContext != null)
+    if (prepared())
       return;
-    sContext = context;
     startApp(context);
-    showFreeMemory(sContext,"Starting app");
+    showFreeMemory(context, "Starting app");
     AppPreferences.prepare(context);
     sUIThreadHandler = new Handler(Looper.getMainLooper());
     HandlerThread handlerThread = new HandlerThread("Background handler thread");
@@ -29,15 +28,19 @@ public class AppState {
     sBgndThreadHandler = new Handler(handlerThread.getLooper());
   }
 
+  private static boolean prepared() {
+    return sUIThreadHandler != null;
+  }
+
   private static void assertPrepared() {
-    if (sContext == null)
+    if (!prepared())
       throw new IllegalStateException("AppState not prepared");
   }
 
-  public static PhotoFile photoFile() {
+  public static PhotoFile photoFile(Context context) {
     assertPrepared();
     if (sPhotoFile == null)
-      constructPhotoFile();
+      constructPhotoFile(context);
     return sPhotoFile;
   }
 
@@ -51,18 +54,12 @@ public class AppState {
     sBgndThreadHandler.post(r);
   }
 
-  private static Context context() {
-    assertPrepared();
-    return sContext;
-  }
-
-  private static void constructPhotoFile() {
-    sPhotoFile = new PhotoFile(context());
-    sPhotoFile.open();
+  private static void constructPhotoFile(Context context) {
+    sPhotoFile = new PhotoFile();
+    sPhotoFile.open(context);
   }
 
   private static PhotoFile sPhotoFile;
-  private static Context sContext;
   private static Handler sUIThreadHandler;
   private static Handler sBgndThreadHandler;
 }

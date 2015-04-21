@@ -77,9 +77,7 @@ public class BitmapTools {
     if (rotationToApply != 0) {
       Matrix matrix = new Matrix();
       matrix.postRotate(rotationToApply);
-      showFreeMemory(null,"about to rotate bitmap");
       bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-      showFreeMemory(null,"done rotating bitmap");
     }
     return bitmap;
   }

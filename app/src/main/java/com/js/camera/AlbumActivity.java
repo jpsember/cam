@@ -41,7 +41,7 @@ public class AlbumActivity extends Activity implements Observer {
     AppState.prepare(this);
 //    setTrace(true);
 
-    mPhotoFile = AppState.photoFile();
+    mPhotoFile = AppState.photoFile(this);
     super.onCreate(savedInstanceState);
     setContentView(buildContentView());
   }
@@ -50,6 +50,7 @@ public class AlbumActivity extends Activity implements Observer {
   protected void onResume() {
     mResumed = true;
     trace("onResume");
+    showFreeMemory(this,"Resuming AlbumActivity");
     super.onResume();
     mPhotoFile.addObserver(this);
     rebuildAlbumIfPhotosAvailable();
@@ -112,7 +113,7 @@ public class AlbumActivity extends Activity implements Observer {
     v.setHorizontalSpacing(spacing);
     v.setStretchMode(GridView.STRETCH_COLUMN_WIDTH);
     v.setGravity(Gravity.CENTER);
-    v.setAdapter(new ImageAdapter(this));
+    v.setAdapter(new ImageAdapter());
 
     v.setOnItemClickListener(new AdapterView.OnItemClickListener() {
       public void onItemClick(AdapterView<?> parent, View v,
@@ -238,10 +239,8 @@ public class AlbumActivity extends Activity implements Observer {
   }
 
   private class ImageAdapter extends BaseAdapter {
-    private Context mContext;
 
-    public ImageAdapter(Context c) {
-      mContext = c;
+    public ImageAdapter() {
     }
 
     @Override
@@ -264,6 +263,10 @@ public class AlbumActivity extends Activity implements Observer {
       return (PhotoInfo) getItem(position);
     }
 
+    private Context context() {
+      return AlbumActivity.this;
+    }
+
     // create a new ImageView for each item referenced by the Adapter
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
@@ -271,7 +274,7 @@ public class AlbumActivity extends Activity implements Observer {
       ImageView imageView;
       if (convertView == null) {
         // if it's not recycled, initialize some attributes
-        imageView = new ImageView(mContext);
+        imageView = new ImageView(context());
         imageView.setLayoutParams(new GridView.LayoutParams(mThumbSize.x, mThumbSize.y));
         imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
         trace("getView position " + position + " =>    built " + nameOf(imageView));
@@ -295,7 +298,7 @@ public class AlbumActivity extends Activity implements Observer {
         if (mThumbnailRequestedSet.add(photo.getId())) {
           trace("requesting bitmap for this view, to construct thumbnail; set now " + d(mThumbnailRequestedSet, false));
           // Ask photo file for (full size) bitmap, and when it's returned, we'll construct a thumbnail
-          mPhotoFile.getBitmap(photo);
+          mPhotoFile.getBitmap(AlbumActivity.this, photo);
         }
         // Simplify this by passing a continuation block (to be executed on the UI thread)
       }

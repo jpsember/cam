@@ -1,5 +1,6 @@
 package com.js.camera;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -23,8 +24,9 @@ public class PhotoManipulator {
    *
    * @param originalBitmap the bitmap to be manipulated; may be changed by the manipulation
    */
-  public PhotoManipulator(PhotoFile photoFile, PhotoInfo photoInfo, Bitmap originalBitmap) {
+  public PhotoManipulator(Context context, PhotoFile photoFile, PhotoInfo photoInfo, Bitmap originalBitmap) {
     assertCorrectConfig(originalBitmap);
+    mContext = context;
     mPhotoFile = photoFile;
     mPhotoInfo = photoInfo;
     mOriginalBitmap = originalBitmap;
@@ -114,7 +116,7 @@ public class PhotoManipulator {
     Bitmap sVignette = null;
     try {
       int vignetteId = sVignetteIds[myMod(vignetteIndex, sVignetteIds.length)];
-      InputStream stream = mPhotoFile.getContext().getResources().openRawResource(vignetteId);
+      InputStream stream = mContext.getResources().openRawResource(vignetteId);
       sVignette = BitmapFactory.decodeStream(stream);
       stream.close();
     } catch (IOException e) {
@@ -144,6 +146,7 @@ public class PhotoManipulator {
     mHashValue = (int) c.getValue();
   }
 
+  private final Context mContext;
   private int mHashValue;
   private PhotoFile mPhotoFile;
   private PhotoInfo mPhotoInfo;

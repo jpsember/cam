@@ -53,10 +53,7 @@ public class PhotoFile extends Observable {
     BitmapConstructed,
   }
 
-  public PhotoFile(Context context) {
-    if (context == null)
-      throw new IllegalArgumentException();
-    mContext = context;
+  public PhotoFile() {
     mState = State.Start;
     setTrace(true);
     doNothing();
@@ -72,6 +69,10 @@ public class PhotoFile extends Observable {
   }
 
   private class OpenPhotoFileTask extends TaskSequence {
+    public OpenPhotoFileTask(Context context) {
+      mContext = context;
+    }
+
     @Override
     protected void execute(int stageNumber) {
       switch (stageNumber) {
@@ -271,9 +272,10 @@ public class PhotoFile extends Observable {
     }
 
     private String mFailMessage;
+    private final Context mContext;
   }
 
-  public void open() {
+  public void open(Context context) {
     assertUIThread();
     if (mState != State.Start)
       throw new IllegalStateException();
@@ -282,7 +284,7 @@ public class PhotoFile extends Observable {
 
     setState(State.Opening);
 
-    TaskSequence t = new OpenPhotoFileTask();
+    TaskSequence t = new OpenPhotoFileTask(context);
     t.start();
   }
 
@@ -435,9 +437,10 @@ public class PhotoFile extends Observable {
 
   private class GetAgedPhotoTask extends TaskSequence {
 
-    public GetAgedPhotoTask(PhotoInfo photoInfo) {
+    public GetAgedPhotoTask(Context context, PhotoInfo photoInfo) {
       photoInfo.assertFrozen();
       mPhotoInfo = photoInfo;
+      mContext = context;
     }
 
     @Override
@@ -449,7 +452,7 @@ public class PhotoFile extends Observable {
             agePhoto();
           }
           Bitmap bitmap = readBitmapFromFile();
-          PhotoManipulator m = new PhotoManipulator(PhotoFile.this, mPhotoInfo, bitmap);
+          PhotoManipulator m = new PhotoManipulator(mContext, PhotoFile.this, mPhotoInfo, bitmap);
           mAgedPhoto = m.getManipulatedBitmap();
         }
         break;
@@ -494,6 +497,7 @@ public class PhotoFile extends Observable {
       }
     }
 
+    private final Context mContext;
     private Bitmap mAgedPhoto;
     private PhotoInfo mPhotoInfo;
   }
@@ -501,9 +505,9 @@ public class PhotoFile extends Observable {
   /**
    * Construct a suitably aged bitmap for a photo
    */
-  public void getBitmap(PhotoInfo photoInfo) {
+  public void getBitmap(Context context, PhotoInfo photoInfo) {
     assertOpen();
-    TaskSequence t = new GetAgedPhotoTask(photoInfo);
+    TaskSequence t = new GetAgedPhotoTask(context, photoInfo);
     t.start();
   }
 
@@ -619,10 +623,6 @@ public class PhotoFile extends Observable {
     return mRandomSeed;
   }
 
-  public Context getContext() {
-    return mContext;
-  }
-
   /**
    * Notify registered observers of an event
    *
@@ -662,7 +662,6 @@ public class PhotoFile extends Observable {
   private boolean mTrace;
   private State mState;
   private String mFailureMessage;
-  private final Context mContext;
   // This is a constant once the file has been created, so thread doesn't matter
   private int mRandomSeed;
 

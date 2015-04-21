@@ -31,7 +31,7 @@ public class ViewPhotoActivity extends Activity implements Observer {
     doNothingAndroid();
     AppState.prepare(this);
 
-    mPhotoFile = AppState.photoFile();
+    mPhotoFile = AppState.photoFile(this);
     Bundle b = getIntent().getExtras();
     if (b == null) throw new IllegalArgumentException();
     mPhotoId = b.getInt(PHOTO_ID_KEY);
@@ -62,7 +62,7 @@ public class ViewPhotoActivity extends Activity implements Observer {
       mPhotoInfo = info;
     }
     // Attempt to load requested photo
-    mPhotoFile.getBitmap(mPhotoInfo);
+    mPhotoFile.getBitmap(this,mPhotoInfo);
   }
 
   @Override

@@ -35,7 +35,7 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
   public void onCreate(Bundle savedInstanceState) {
     doNothingAndroid();
     AppState.prepare(this);
-    mPhotoFile = AppState.photoFile();
+    mPhotoFile = AppState.photoFile(this);
 
     super.onCreate(savedInstanceState);
     requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -169,7 +169,7 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
       case PhotoCreated:
         // Request a load of the photo's bitmap to display in the image view
         mBitmapLoadingPhotoInfo = (PhotoInfo) args[1];
-        mPhotoFile.getBitmap(mBitmapLoadingPhotoInfo);
+        mPhotoFile.getBitmap(this, mBitmapLoadingPhotoInfo);
         break;
     }
   }
