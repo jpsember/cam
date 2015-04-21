@@ -1,16 +1,11 @@
 package com.js.camera;
 
-import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
 
 import android.app.Activity;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.graphics.ImageFormat;
-import android.graphics.Matrix;
-import android.hardware.Camera;
 import android.os.Bundle;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -29,12 +24,6 @@ import static com.js.android.AndroidTools.*;
 
 public class CameraActivity extends Activity implements OnClickListener, Observer {
 
-  private enum Demo {
-    Preview, TakePhotos, PhotoManip, PhotoAger
-  }
-
-  private static final Demo DEMO = Demo.TakePhotos;
-
   @Override
   public void onCreate(Bundle savedInstanceState) {
     doNothingAndroid();
@@ -48,53 +37,6 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
     setContentView(buildContentView());
   }
 
-  /**
-   * Install a PreviewCallback for test purposes
-   */
-  private void installPreviewCallback() {
-    final MyCamera previewCamera = mCamera;
-    previewCamera.setPreviewCallback(new Camera.PreviewCallback() {
-      @Override
-      public void onPreviewFrame(byte[] data, Camera camera) {
-        // This is running in a different thread!  We must
-        // verify that the camera is still open, and avoid using
-        // getParameters() or other methods that are not threadsafe
-        MyCamera.Properties properties = previewCamera.getProperties();
-
-        IPoint previewSize = properties.previewSize();
-        if (previewSize == null)
-          return;
-
-        mCounter++;
-        if (mCounter % 40 != 0)
-          return;
-
-        if (properties.format() != ImageFormat.NV21)
-          throw new UnsupportedOperationException("Unsupported preview image format: " + properties.format());
-
-        int argb[] = BitmapTools.decodeYUV420SP(null, data, previewSize);
-        Bitmap bitmap = Bitmap.createBitmap(argb, previewSize.x, previewSize.y, Bitmap.Config.ARGB_8888);
-
-        int rotation = properties.rotation();
-        if (rotation != 0) {
-          Matrix matrix = new Matrix();
-          matrix.postRotate(rotation);
-          bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-        }
-
-        final Bitmap finalBitmap = bitmap;
-        AppState.postUIEvent(new Runnable() {
-          public void run() {
-            if (!mResumed) return;
-            mImageView.setImageBitmap(finalBitmap);
-          }
-        });
-      }
-
-      private int mCounter;
-    });
-  }
-
   private final static int BGND_COLOR = Color.DKGRAY;
 
   private View buildContentView() {
@@ -103,16 +45,10 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
     final LinearLayout container = UITools.linearLayout(this, false);
 
     mCameraViewContainer = new FrameLayout(this);
-    {
-      mCameraViewContainer.setBackgroundColor(BGND_COLOR);
-      if (DEMO == Demo.Preview)
-        mCameraViewContainer.setPadding(10, 10, 10, 10);
-    }
+    mCameraViewContainer.setBackgroundColor(BGND_COLOR);
 
-    float weight = (DEMO == Demo.PhotoManip || DEMO == Demo.PhotoAger) ? 4.0f : 0.8f;
+    float weight = 0.8f;
     container.addView(buildImageView(), UITools.layoutParams(container, weight));
-    if (DEMO == Demo.Preview)
-      ShrinkingView.build(container, 1.0f);
     container.addView(mCameraViewContainer, UITools.layoutParams(container, 1.0f));
 
     return container;
@@ -145,9 +81,6 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
 
     buildCameraView();
     mCameraViewContainer.addView(mPreview);
-    if (DEMO == Demo.Preview)
-      installPreviewCallback();
-
     mCamera.open();
   }
 
@@ -159,27 +92,6 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
 
   private void pausePhotoFile() {
     mPhotoFile.deleteObserver(this);
-  }
-
-  private PhotoInfo getNextPhotoFromFile() {
-    PhotoInfo photoInfo = null;
-    List<PhotoInfo> photos = mPhotoFile.getPhotos(0, 100);
-    if (photos.size() < 4)
-      photos.clear();
-    int bestDiff = Integer.MAX_VALUE;
-    int previousPhotoId = -1;
-    if (mBitmapLoadingPhotoInfo != null)
-      previousPhotoId = mBitmapLoadingPhotoInfo.getId();
-    for (PhotoInfo p : photos) {
-      int diff = p.getId() - previousPhotoId;
-      if (diff > 0 && diff < bestDiff) {
-        bestDiff = diff;
-        photoInfo = p;
-      }
-    }
-    if (photoInfo == null && !photos.isEmpty())
-      photoInfo = photos.get(0);
-    return photoInfo;
   }
 
   private void buildCameraView() {
@@ -202,35 +114,7 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
   public void onClick(View arg0) {
     if (!mCamera.isOpen())
       return;
-
-    switch (DEMO) {
-      case PhotoAger: {
-        if (!mPhotoFile.isOpen())
-          return;
-        PhotoInfo photoInfo = getNextPhotoFromFile();
-        ASSERT(photoInfo != null);
-        mAgePhotoInfo = photoInfo;
-        mBitmapLoadingPhotoInfo = photoInfo;
-        mPhotoFile.getBitmap(mBitmapLoadingPhotoInfo);
-      }
-      break;
-      case PhotoManip: {
-        if (!mPhotoFile.isOpen())
-          return;
-        PhotoInfo photoInfo = getNextPhotoFromFile();
-        if (photoInfo != null) {
-          mBitmapLoadingPhotoInfo = photoInfo;
-          mPhotoFile.getBitmap(mBitmapLoadingPhotoInfo);
-        }
-      }
-      break;
-      case Preview:
-        mCamera.setPreviewStarted(!mCamera.isPreviewStarted());
-        break;
-      case TakePhotos:
-        mCamera.takePicture();
-        break;
-    }
+    mCamera.takePicture();
   }
 
   @Override
@@ -253,51 +137,7 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
     mImageView = new ImageView(this);
     mImageView.setBackgroundColor(UITools.debugColor());
     mImageView.setImageResource(R.drawable.ic_launcher);
-    mImageView.setOnClickListener(new OnClickListener() {
-      @Override
-      public void onClick(View v) {
-        processImageViewClick();
-      }
-    });
     return mImageView;
-  }
-
-  private void processImageViewClick() {
-    if (!mPhotoFile.isOpen())
-      return;
-
-    switch (DEMO) {
-      case PhotoAger:
-        if (mAgeBitmap == null)
-          return;
-        int targetAge = mAgePhotoInfo.getCurrentAgeState() + 1;
-        if (targetAge == PhotoInfo.AGE_STATE_MAX) {
-          mAgePhotoInfo = null;
-          mAgeBitmap = null;
-          return;
-        }
-        // Age the photo
-        mAgePhotoInfo = mutableCopyOf(mAgePhotoInfo);
-        mAgePhotoInfo.setTargetAgeState(targetAge);
-        mAgePhotoInfo.freeze();
-
-        PhotoAger ager = new PhotoAger(mAgePhotoInfo, mAgeBitmap);
-        mAgeBitmap = ager.getAgedJPEG();
-        mAgePhotoInfo = ager.getAgedInfo();
-
-        Bitmap bitmap = BitmapFactory.decodeByteArray(mAgeBitmap, 0, mAgeBitmap.length);
-        // This should perhaps be done in the photo file thread...
-        PhotoManipulator m = new PhotoManipulator(mPhotoFile, mAgePhotoInfo, bitmap);
-        mImageView.setImageBitmap(m.getManipulatedBitmap());
-        break;
-    }
-  }
-
-  private Bitmap constructBitmapFromJPEG(byte[] jpeg, int rotationToApply) {
-    Bitmap bitmap = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.length);
-    showFreeMemory(null, "constructBitmapFromJPEG");
-    bitmap = BitmapTools.rotateBitmap(bitmap, rotationToApply);
-    return bitmap;
   }
 
   // Observer interface (for PhotoFile)
@@ -319,18 +159,12 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
           return;
         }
         mImageView.setImageBitmap(bitmap);
-        if (DEMO == Demo.PhotoAger) {
-          mAgeBitmap = BitmapTools.encodeJPEG(bitmap, 80);
-        }
       }
       break;
       case PhotoCreated:
-        if (DEMO == Demo.TakePhotos) {
-          // Request a load of the photo's bitmap to display in the image view
-          mBitmapLoadingPhotoInfo = (PhotoInfo) args[1];
-          mPhotoFile.getBitmap(mBitmapLoadingPhotoInfo);
-          break;
-        }
+        // Request a load of the photo's bitmap to display in the image view
+        mBitmapLoadingPhotoInfo = (PhotoInfo) args[1];
+        mPhotoFile.getBitmap(mBitmapLoadingPhotoInfo);
         break;
     }
   }
@@ -341,7 +175,5 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
   private ImageView mImageView;
   private PhotoFile mPhotoFile;
   private PhotoInfo mBitmapLoadingPhotoInfo;
-  private PhotoInfo mAgePhotoInfo;
-  private byte[] mAgeBitmap;
   private boolean mResumed;
 }
