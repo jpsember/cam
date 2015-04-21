@@ -50,7 +50,7 @@ public class AlbumActivity extends Activity implements Observer {
   protected void onResume() {
     mResumed = true;
     trace("onResume");
-    showFreeMemory(this,"Resuming AlbumActivity");
+//    showFreeMemory(this,"Resuming AlbumActivity");
     super.onResume();
     mPhotoFile.addObserver(this);
     rebuildAlbumIfPhotosAvailable();

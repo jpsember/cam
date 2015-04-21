@@ -55,7 +55,7 @@ public class PhotoFile extends Observable {
 
   public PhotoFile() {
     mState = State.Start;
-    setTrace(true);
+//    setTrace(true);
     doNothing();
     doNothingAndroid();
   }
@@ -454,6 +454,7 @@ public class PhotoFile extends Observable {
           Bitmap bitmap = readBitmapFromFile();
           PhotoManipulator m = new PhotoManipulator(mContext, PhotoFile.this, mPhotoInfo, bitmap);
           mAgedPhoto = m.getManipulatedBitmap();
+          bitmap.recycle();
         }
         break;
         case 1:

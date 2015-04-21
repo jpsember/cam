@@ -77,7 +77,9 @@ public class PhotoAger {
 
       // Scale bitmap to new size
       IPoint newSize = calcSizeForAge(newAge);
-      bitmap = BitmapTools.scaleBitmapToFit(bitmap, newSize, false, true);
+      Bitmap oldBitmap = bitmap;
+      bitmap = BitmapTools.scaleBitmapToFit(oldBitmap, newSize, false, true);
+      BitmapTools.recycleOldBitmapIfDifferent(oldBitmap, bitmap);
 
       // Bleach out the colors a bit
       {
@@ -86,6 +88,7 @@ public class PhotoAger {
         if (origScale > 0) {
           float colorScale = newScale / origScale;
           byte[] yuv = BitmapTools.getYUV420SP(bitmap, null);
+          BitmapTools.recycle(bitmap);
           BitmapTools.scaleYUV420SP(yuv, newSize, 1.0f, colorScale, colorScale);
           int[] argb = BitmapTools.decodeYUV420SP(null, yuv, newSize);
           bitmap = Bitmap.createBitmap(argb, newSize.x, newSize.y, Bitmap.Config.ARGB_8888);
@@ -94,6 +97,7 @@ public class PhotoAger {
 
       // Convert back to JPEG array of bytes
       mCurrentJPEG = BitmapTools.encodeJPEG(bitmap, calcJPEGQualityForAge(newAge));
+      bitmap.recycle();
       mAgedPhotoInfo = frozen(newInfo);
     }
   }

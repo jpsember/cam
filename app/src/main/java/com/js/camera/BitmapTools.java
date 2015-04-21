@@ -88,10 +88,23 @@ public class BitmapTools {
    * @return newBitmap (so it can be assigned as the next 'old' bitmap)
    */
   public static Bitmap recycleOldBitmapIfDifferent(Bitmap oldBitmap, Bitmap newBitmap) {
-    if (oldBitmap != null && oldBitmap != newBitmap) {
-      oldBitmap.recycle();
+    if (oldBitmap != newBitmap) {
+      recycle(oldBitmap);
     }
     return newBitmap;
+  }
+
+  /**
+   * If a bitmap is not null, recycle it
+   *
+   * @param bitmap
+   * @return null
+   */
+  public static Bitmap recycle(Bitmap bitmap) {
+    if (bitmap != null) {
+      bitmap.recycle();
+    }
+    return null;
   }
 
   /**
