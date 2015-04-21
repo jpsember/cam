@@ -5,6 +5,7 @@ import java.io.PrintStream;
 
 import com.js.basic.Files;
 
+import android.app.ActivityManager;
 import android.content.Context;
 import android.os.Looper;
 import android.widget.Toast;
@@ -81,6 +82,33 @@ public final class AndroidTools {
       return;
     throw new IllegalStateException("Attempt to call from UI thread " + nameOf(Thread.currentThread()));
   }
+
+  public static void showFreeMemory(Context context) {
+    if (context == null)
+      context = sMemoryContext;
+    else
+      sMemoryContext = context;
+    if (context == null)
+      throw new IllegalArgumentException();
+
+    ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
+    ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+    activityManager.getMemoryInfo(mi);
+    float availableMb = (float) (mi.availMem / 1048576.0);
+    boolean bigJumpFlag = sPrevAvailableMem != 0 && (Math.abs(availableMb - sPrevAvailableMem) >= 1.0f);
+    sPrevAvailableMem = availableMb;
+
+    StringBuilder sb = new StringBuilder();
+    sb.append(bigJumpFlag ? "*** " : "    ");
+    sb.append(d(availableMb, 5, 1));
+    sb.append(" Mb  ");
+    sb.append(stackTrace(1));
+    pr(sb);
+  }
+
+  private static float sPrevAvailableMem;
+  // Warning: this will cause memory leaks, and should be used only with showFreeMemory() calls
+  private static Context sMemoryContext;
 
   private static class AndroidSystemOutFilter extends PrintStream {
 

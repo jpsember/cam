@@ -11,6 +11,7 @@ import com.js.basic.Rect;
 import java.io.ByteArrayOutputStream;
 
 import static com.js.basic.Tools.*;
+import static com.js.android.AndroidTools.*;
 
 public class BitmapTools {
 
@@ -76,7 +77,9 @@ public class BitmapTools {
     if (rotationToApply != 0) {
       Matrix matrix = new Matrix();
       matrix.postRotate(rotationToApply);
+      showFreeMemory(null);
       bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+      showFreeMemory(null);
     }
     return bitmap;
   }

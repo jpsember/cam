@@ -134,8 +134,11 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
       public void pictureTaken(byte[] jpeg, int rotationToApply) {
         if (!mPhotoFile.isOpen())
           return;
+        showFreeMemory(CameraActivity.this);
         mPhotoFile.createPhoto(jpeg, rotationToApply);
+        showFreeMemory(CameraActivity.this);
         Bitmap bitmap = constructBitmapFromJPEG(jpeg, rotationToApply);
+        showFreeMemory(CameraActivity.this);
         mImageView.setImageBitmap(bitmap);
         pr("took picture " + BitmapTools.size(bitmap));
       }
@@ -293,6 +296,7 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
 
   private Bitmap constructBitmapFromJPEG(byte[] jpeg, int rotationToApply) {
     Bitmap bitmap = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.length);
+    showFreeMemory(CameraActivity.this);
     bitmap = BitmapTools.rotateBitmap(bitmap, rotationToApply);
     return bitmap;
   }

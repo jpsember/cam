@@ -8,6 +8,7 @@ import android.os.Looper;
 import com.js.android.AppPreferences;
 
 import static com.js.basic.Tools.*;
+import static com.js.android.AndroidTools.*;
 
 /**
  * Class encapulating data accessible throughout the application, that is,
@@ -20,6 +21,7 @@ public class AppState {
       return;
     sContext = context;
     startApp(context);
+    showFreeMemory(sContext);
     AppPreferences.prepare(context);
     sUIThreadHandler = new Handler(Looper.getMainLooper());
     HandlerThread handlerThread = new HandlerThread("Background handler thread");
