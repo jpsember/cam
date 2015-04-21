@@ -4,6 +4,8 @@ import java.util.Observable;
 import java.util.Observer;
 
 import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -23,6 +25,11 @@ import static com.js.basic.Tools.*;
 import static com.js.android.AndroidTools.*;
 
 public class CameraActivity extends Activity implements OnClickListener, Observer {
+
+  public static Intent buildIntent(Context context) {
+    Intent intent = new Intent(context, CameraActivity.class);
+    return intent;
+  }
 
   @Override
   public void onCreate(Bundle savedInstanceState) {

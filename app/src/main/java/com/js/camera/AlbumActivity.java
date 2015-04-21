@@ -2,7 +2,6 @@ package com.js.camera;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Matrix;
@@ -87,8 +86,7 @@ public class AlbumActivity extends Activity implements Observer {
     // Handle presses on the action bar items
     switch (item.getItemId()) {
       case R.id.action_camera: {
-        Intent intent = new Intent(this, CameraActivity.class);
-        startActivityForResult(intent, 0);
+        startActivityForResult(CameraActivity.buildIntent(this), 0);
       }
       break;
       default:
