@@ -344,73 +344,78 @@ public class PhotoFile extends Observable {
     return mFailureMessage;
   }
 
-  public void createPhoto(final byte[] jpegData, final IPoint imageSize, final int rotationToApply) {
-    // Make this TaskSequence non-anonymous
-    assertOpen();
-    TaskSequence t = new TaskSequence() {
+  private class CreatePhotoTask extends TaskSequence {
+    public CreatePhotoTask(byte[] jpegData, IPoint imageSize, int rotationToApply) {
+      mJPEGData = jpegData;
+      mImageSize = imageSize;
+      mRotationToApply = rotationToApply;
+    }
 
-      @Override
-      protected void execute(int stageNumber) {
-        switch (stageNumber) {
-          case 0:
-            try {
-              if (true) {
-                warning("sleeping for test purposes");
-                sleepFor(500);
-              }
+    @Override
+    protected void execute(int stageNumber) {
+      switch (stageNumber) {
+        case 0:
+          try {
+            BitmapFactory.Options opt;
+            Bitmap bitmap;
+            {
+              opt = new BitmapFactory.Options();
+              opt.inTempStorage = new byte[16 * 1024];
 
-              BitmapFactory.Options opt;
-              Bitmap bitmap;
-              {
-                opt = new BitmapFactory.Options();
-                opt.inTempStorage = new byte[16 * 1024];
+              float mb = (mImageSize.x * mImageSize.y) / 1024000.0f;
 
-                float mb = (imageSize.x * imageSize.y) / 1024000.0f;
-
-                if (mb > 4f)
-                  opt.inSampleSize = 4;
-                else if (mb > 3f)
-                  opt.inSampleSize = 2;
-                bitmap = BitmapFactory.decodeByteArray(jpegData, 0, jpegData.length, opt);
-                trace("Image size " + imageSize + ", inSampleSize " + opt.inSampleSize + ", Bitmap size " + BitmapTools.size(bitmap));
-              }
-
-              // Scale bitmap down to our maximum size, if it's larger;
-              // do this before rotating!
-              boolean isPortrait = BitmapTools.getOrientation(bitmap) == BitmapTools.ORIENTATION_PORTRAIT;
-              Bitmap oldBitmap = bitmap;
-              bitmap = BitmapTools.scaleBitmapToFit(oldBitmap, PhotoInfo.getLogicalMaximumSize(isPortrait), true, true);
-              oldBitmap = BitmapTools.recycleOldBitmapIfDifferent(oldBitmap, bitmap);
-              bitmap = BitmapTools.rotateBitmap(bitmap, rotationToApply);
-              BitmapTools.recycleOldBitmapIfDifferent(oldBitmap, bitmap);
-
-              PhotoInfo info = createPhotoInfo();
-
-              File photoPath = getPhotoBitmapPath(info.getId(), false);
-              trace("Writing " + info + " to " + photoPath);
-              OutputStream stream = new FileOutputStream(photoPath);
-              bitmap.compress(Bitmap.CompressFormat.JPEG, PhotoInfo.JPEG_QUALITY_MAX, stream);
-              bitmap.recycle();
-              mPhotoInfo = info;
-            } catch (IOException e) {
-              mFailMessage = "create photo; " + d(e);
+              if (mb > 4f)
+                opt.inSampleSize = 4;
+              else if (mb > 3f)
+                opt.inSampleSize = 2;
+              bitmap = BitmapFactory.decodeByteArray(mJPEGData, 0, mJPEGData.length, opt);
+              mJPEGData = null;
+              trace("Image size " + mImageSize + ", inSampleSize " + opt.inSampleSize + ", Bitmap size " + BitmapTools.size(bitmap));
             }
-            break;
-          case 1:
-            if (mFailMessage != null) {
-              setFailed(mFailMessage);
-              abort();
-            } else {
-              notifyEventObservers(Event.PhotoCreated, mPhotoInfo);
-              finish();
-            }
-            break;
-        }
+
+            // Scale bitmap down to our maximum size, if it's larger;
+            // do this before rotating!
+            boolean isPortrait = BitmapTools.getOrientation(bitmap) == BitmapTools.ORIENTATION_PORTRAIT;
+            Bitmap oldBitmap = bitmap;
+            bitmap = BitmapTools.scaleBitmapToFit(oldBitmap, PhotoInfo.getLogicalMaximumSize(isPortrait), true, true);
+            oldBitmap = BitmapTools.recycleOldBitmapIfDifferent(oldBitmap, bitmap);
+            bitmap = BitmapTools.rotateBitmap(bitmap, mRotationToApply);
+            BitmapTools.recycleOldBitmapIfDifferent(oldBitmap, bitmap);
+
+            PhotoInfo info = createPhotoInfo();
+
+            File photoPath = getPhotoBitmapPath(info.getId(), false);
+            trace("Writing " + info + " to " + photoPath);
+            OutputStream stream = new FileOutputStream(photoPath);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, PhotoInfo.JPEG_QUALITY_MAX, stream);
+            bitmap.recycle();
+            mPhotoInfo = info;
+          } catch (IOException e) {
+            mFailMessage = "create photo; " + d(e);
+          }
+          break;
+        case 1:
+          if (mFailMessage != null) {
+            setFailed(mFailMessage);
+            abort();
+          } else {
+            notifyEventObservers(Event.PhotoCreated, mPhotoInfo);
+            finish();
+          }
+          break;
       }
+    }
 
-      private PhotoInfo mPhotoInfo;
-      private String mFailMessage;
-    };
+    private PhotoInfo mPhotoInfo;
+    private String mFailMessage;
+    private byte[] mJPEGData;
+    private IPoint mImageSize;
+    private int mRotationToApply;
+  }
+
+  public void createPhoto(final byte[] jpegData, final IPoint imageSize, final int rotationToApply) {
+    assertOpen();
+    TaskSequence t = new CreatePhotoTask(jpegData, imageSize, rotationToApply);
     t.start();
   }
 
