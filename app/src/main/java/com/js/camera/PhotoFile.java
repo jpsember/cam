@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory;
 import android.os.Environment;
 
 import com.js.basic.Files;
+import com.js.basic.IPoint;
 import com.js.basic.JSONTools;
 
 import org.apache.commons.io.FileUtils;
@@ -343,7 +344,8 @@ public class PhotoFile extends Observable {
     return mFailureMessage;
   }
 
-  public void createPhoto(final byte[] jpegData, final int rotationToApply) {
+  public void createPhoto(final byte[] jpegData, final IPoint imageSize, final int rotationToApply) {
+    // Make this TaskSequence non-anonymous
     assertOpen();
     TaskSequence t = new TaskSequence() {
 
@@ -357,7 +359,22 @@ public class PhotoFile extends Observable {
                 sleepFor(500);
               }
 
-              Bitmap bitmap = BitmapFactory.decodeByteArray(jpegData, 0, jpegData.length);
+              BitmapFactory.Options opt;
+              Bitmap bitmap;
+              {
+                opt = new BitmapFactory.Options();
+                opt.inTempStorage = new byte[16 * 1024];
+
+                float mb = (imageSize.x * imageSize.y) / 1024000.0f;
+
+                if (mb > 4f)
+                  opt.inSampleSize = 4;
+                else if (mb > 3f)
+                  opt.inSampleSize = 2;
+                bitmap = BitmapFactory.decodeByteArray(jpegData, 0, jpegData.length, opt);
+                trace("Image size " + imageSize + ", inSampleSize " + opt.inSampleSize + ", Bitmap size " + BitmapTools.size(bitmap));
+              }
+
               // Scale bitmap down to our maximum size, if it's larger;
               // do this before rotating!
               boolean isPortrait = BitmapTools.getOrientation(bitmap) == BitmapTools.ORIENTATION_PORTRAIT;

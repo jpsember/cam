@@ -339,6 +339,7 @@ public class MyCamera {
     p.mRotation = mCorrectingRotation;
     p.setPreviewSizes(camera.getParameters());
     p.mFormat = camera.getParameters().getPreviewFormat();
+    p.mPictureSize = getIPoint(camera.getParameters().getPictureSize());
     setProperties(p);
   }
 
@@ -350,6 +351,11 @@ public class MyCamera {
     if (mProperties == null)
       throw new IllegalStateException();
     return mProperties;
+  }
+
+  // Convert a Camera Size object to an IPoint
+  private static IPoint getIPoint(Camera.Size size) {
+    return new IPoint(size.width, size.height);
   }
 
   // The camera is constructed by the background thread, and once
@@ -383,6 +389,7 @@ public class MyCamera {
       for (IPoint pt : mPreviewSizes)
         p.mPreviewSizes.add(new IPoint(pt));
       p.mPreviewSizeIndex = mPreviewSizeIndex;
+      p.mPictureSize = mPictureSize;
       return p;
     }
 
@@ -420,7 +427,7 @@ public class MyCamera {
       List<Size> sizes = parameters.getSupportedPreviewSizes();
       mPreviewSizes.clear();
       for (Size size : sizes) {
-        mPreviewSizes.add(new IPoint(size.width, size.height));
+        mPreviewSizes.add(getIPoint(size));
       }
     }
 
@@ -430,10 +437,14 @@ public class MyCamera {
       return mPreviewSizes.get(sizeIndex);
     }
 
+    public IPoint getPictureSize() {
+      return mPictureSize;
+    }
+
     private List<IPoint> mPreviewSizes = new ArrayList<IPoint>();
     private int mPreviewSizeIndex = -1;
     private int mFormat;
     private int mRotation;
-
+    private IPoint mPictureSize;
   }
 }
