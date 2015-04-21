@@ -21,7 +21,7 @@ public class AppState {
       return;
     sContext = context;
     startApp(context);
-    showFreeMemory(sContext);
+    showFreeMemory(sContext,"Starting app");
     AppPreferences.prepare(context);
     sUIThreadHandler = new Handler(Looper.getMainLooper());
     HandlerThread handlerThread = new HandlerThread("Background handler thread");

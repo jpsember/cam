@@ -352,17 +352,28 @@ public class PhotoFile extends Observable {
         switch (stageNumber) {
           case 0:
             try {
-              Bitmap bitmap = BitmapFactory.decodeByteArray(jpegData, 0, jpegData.length);
-              bitmap = BitmapTools.rotateBitmap(bitmap, rotationToApply);
-              PhotoInfo info = createPhotoInfo();
+              if (true) {
+                warning("sleeping for test purposes");
+                sleepFor(500);
+              }
 
-              // Scale photo to size appropriate to starting state
-              unimp("scale photo to starting state");
+              Bitmap bitmap = BitmapFactory.decodeByteArray(jpegData, 0, jpegData.length);
+              // Scale bitmap down to our maximum size, if it's larger;
+              // do this before rotating!
+              boolean isPortrait = BitmapTools.getOrientation(bitmap) == BitmapTools.ORIENTATION_PORTRAIT;
+              Bitmap oldBitmap = bitmap;
+              bitmap = BitmapTools.scaleBitmapToFit(oldBitmap, PhotoInfo.getLogicalMaximumSize(isPortrait), true, true);
+              oldBitmap = BitmapTools.recycleOldBitmapIfDifferent(oldBitmap, bitmap);
+              bitmap = BitmapTools.rotateBitmap(bitmap, rotationToApply);
+              BitmapTools.recycleOldBitmapIfDifferent(oldBitmap, bitmap);
+
+              PhotoInfo info = createPhotoInfo();
 
               File photoPath = getPhotoBitmapPath(info.getId(), false);
               trace("Writing " + info + " to " + photoPath);
               OutputStream stream = new FileOutputStream(photoPath);
               bitmap.compress(Bitmap.CompressFormat.JPEG, PhotoInfo.JPEG_QUALITY_MAX, stream);
+              bitmap.recycle();
               mPhotoInfo = info;
             } catch (IOException e) {
               mFailMessage = "create photo; " + d(e);

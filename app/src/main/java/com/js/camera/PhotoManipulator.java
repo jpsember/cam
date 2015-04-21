@@ -89,7 +89,7 @@ public class PhotoManipulator {
 
   private void constructCanvas() {
     IPoint targetSize = PhotoInfo.getLogicalMaximumSize(isPortrait());
-    Bitmap bitmap = BitmapTools.scaleBitmapToFit(mOriginalBitmap, targetSize, true);
+    Bitmap bitmap = BitmapTools.scaleBitmapToFit(mOriginalBitmap, targetSize, true, false);
     // Construct a copy of the scaled bitmap, so we don't modify the original
     bitmap = bitmap.copy(bitmap.getConfig(), true);
     if (bitmap == null)

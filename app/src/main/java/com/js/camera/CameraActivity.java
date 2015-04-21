@@ -134,13 +134,11 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
       public void pictureTaken(byte[] jpeg, int rotationToApply) {
         if (!mPhotoFile.isOpen())
           return;
-        showFreeMemory(CameraActivity.this);
+        showFreeMemory(null, "PhotoFile.createPhoto");
         mPhotoFile.createPhoto(jpeg, rotationToApply);
-        showFreeMemory(CameraActivity.this);
-        Bitmap bitmap = constructBitmapFromJPEG(jpeg, rotationToApply);
-        showFreeMemory(CameraActivity.this);
-        mImageView.setImageBitmap(bitmap);
-        pr("took picture " + BitmapTools.size(bitmap));
+        showFreeMemory(null, "After createPhoto");
+        // When photo file has created new entry, it will call our observer
+        // and we can then add it to the image view
       }
     });
 
@@ -296,7 +294,7 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
 
   private Bitmap constructBitmapFromJPEG(byte[] jpeg, int rotationToApply) {
     Bitmap bitmap = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.length);
-    showFreeMemory(CameraActivity.this);
+    showFreeMemory(null, "constructBitmapFromJPEG");
     bitmap = BitmapTools.rotateBitmap(bitmap, rotationToApply);
     return bitmap;
   }
@@ -315,6 +313,12 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
           warning("no bitmap for " + photoInfo);
           return;
         }
+
+        if (DEMO == Demo.TakePhotos) {
+          mImageView.setImageBitmap(bitmap);
+          break;
+        }
+
         if (mBitmapLoadingPhotoInfo == null || photoInfo.getId() != mBitmapLoadingPhotoInfo.getId()) {
           warning("bitmap is stale:" + photoInfo);
           return;

@@ -77,7 +77,7 @@ public class PhotoAger {
 
       // Scale bitmap to new size
       IPoint newSize = calcSizeForAge(newAge);
-      bitmap = BitmapTools.scaleBitmapToFit(bitmap, newSize, false);
+      bitmap = BitmapTools.scaleBitmapToFit(bitmap, newSize, false, true);
 
       // Bleach out the colors a bit
       {

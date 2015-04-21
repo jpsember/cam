@@ -83,7 +83,7 @@ public final class AndroidTools {
     throw new IllegalStateException("Attempt to call from UI thread " + nameOf(Thread.currentThread()));
   }
 
-  public static void showFreeMemory(Context context) {
+  public static void showFreeMemory(Context context, String message) {
     if (context == null)
       context = sMemoryContext;
     else
@@ -102,7 +102,11 @@ public final class AndroidTools {
     sb.append(bigJumpFlag ? "*** " : "    ");
     sb.append(d(availableMb, 5, 1));
     sb.append(" Mb  ");
+    if (message != null)
+      sb.append(message);
+    sb.append(" (");
     sb.append(stackTrace(1));
+    sb.append(")");
     pr(sb);
   }
 

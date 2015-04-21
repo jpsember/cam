@@ -77,22 +77,36 @@ public class BitmapTools {
     if (rotationToApply != 0) {
       Matrix matrix = new Matrix();
       matrix.postRotate(rotationToApply);
-      showFreeMemory(null);
+      showFreeMemory(null,"about to rotate bitmap");
       bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-      showFreeMemory(null);
+      showFreeMemory(null,"done rotating bitmap");
     }
     return bitmap;
   }
 
   /**
+   * If oldBitmap exists, and is different than newBitmap, recycles oldBitmap
+   *
+   * @return newBitmap (so it can be assigned as the next 'old' bitmap)
+   */
+  public static Bitmap recycleOldBitmapIfDifferent(Bitmap oldBitmap, Bitmap newBitmap) {
+    if (oldBitmap != null && oldBitmap != newBitmap) {
+      oldBitmap.recycle();
+    }
+    return newBitmap;
+  }
+
+  /**
    * Scale bitmap, if necessary, to fit a target rectangle, without changing aspect ratio
    */
-  public static Bitmap scaleBitmapToFit(Bitmap bitmap, IPoint size, boolean preserveAspectRatio) {
+  public static Bitmap scaleBitmapToFit(Bitmap bitmap, IPoint size, boolean preserveAspectRatio, boolean avoidScalingUp) {
     if (!preserveAspectRatio) {
       return Bitmap.createScaledBitmap(bitmap, size.x, size.y, true);
     } else {
       Rect targetRect = new Rect(0, 0, size.x, size.y);
       Rect originalRect = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
+      if (avoidScalingUp && targetRect.contains(originalRect))
+        return bitmap;
       Matrix matrix = MyMath.calcRectFitRectTransform(originalRect, targetRect);
       return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
     }
