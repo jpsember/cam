@@ -314,12 +314,6 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
           warning("no bitmap for " + photoInfo);
           return;
         }
-
-        if (DEMO == Demo.TakePhotos) {
-          mImageView.setImageBitmap(bitmap);
-          break;
-        }
-
         if (mBitmapLoadingPhotoInfo == null || photoInfo.getId() != mBitmapLoadingPhotoInfo.getId()) {
           warning("bitmap is stale:" + photoInfo);
           return;
@@ -330,6 +324,14 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
         }
       }
       break;
+      case PhotoCreated:
+        if (DEMO == Demo.TakePhotos) {
+          // Request a load of the photo's bitmap to display in the image view
+          mBitmapLoadingPhotoInfo = (PhotoInfo) args[1];
+          mPhotoFile.getBitmap(mBitmapLoadingPhotoInfo);
+          break;
+        }
+        break;
     }
   }
 
