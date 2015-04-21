@@ -70,10 +70,8 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
       public void pictureTaken(byte[] jpeg, int rotationToApply) {
         if (!mPhotoFile.isOpen())
           return;
-        showFreeMemory(null, "PhotoFile.createPhoto");
         IPoint pictureSize = mCamera.getProperties().getPictureSize();
         mPhotoFile.createPhoto(jpeg, pictureSize, rotationToApply);
-        showFreeMemory(null, "After createPhoto");
         // When photo file has created new entry, it will call our observer
         // and we can then add it to the image view
       }

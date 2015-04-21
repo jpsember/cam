@@ -85,10 +85,6 @@ public final class AndroidTools {
 
   public static void showFreeMemory(Context context, String message) {
     if (context == null)
-      context = sMemoryContext;
-    else
-      sMemoryContext = context;
-    if (context == null)
       throw new IllegalArgumentException();
 
     ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
@@ -111,8 +107,6 @@ public final class AndroidTools {
   }
 
   private static float sPrevAvailableMem;
-  // Warning: this will cause memory leaks, and should be used only with showFreeMemory() calls
-  private static Context sMemoryContext;
 
   private static class AndroidSystemOutFilter extends PrintStream {
 
