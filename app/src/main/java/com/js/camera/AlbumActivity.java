@@ -3,7 +3,6 @@ package com.js.camera;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.graphics.Matrix;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -21,13 +20,10 @@ import com.js.basic.IPoint;
 import com.js.camera.camera.R;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
-import java.util.Random;
 import java.util.Set;
 
 import static com.js.basic.Tools.*;
@@ -70,7 +66,6 @@ public class AlbumActivity extends Activity implements Observer {
     trace("onPause");
     mPhotoFile.deleteObserver(this);
     mPhotos.clear();
-    mPhotoIdToThumbnailBitmapMap.clear();
     super.onPause();
   }
 
@@ -144,7 +139,7 @@ public class AlbumActivity extends Activity implements Observer {
           trace("not requesting thumbnail");
           break;
         }
-        if (mPhotoIdToThumbnailBitmapMap.containsKey(photo.getId())) {
+        if (mPhotoFile.getBitmapFromMemCache(memCacheKeyFor(photo)) != null) {
           throw new IllegalStateException("thumbnail already exists");
         }
         // Start a new TaskSequence to build and deal with thumbnail
@@ -196,18 +191,7 @@ public class AlbumActivity extends Activity implements Observer {
     private void receivedThumbnail() {
       trace("storing thumbnail bitmap " + nameOf(mThumbnailBitmap)
           + " within map, key " + mPhoto);
-      if (MAX_THUMBNAIL_MAP_SIZE > 0) {
-        warning("limiting size of thumbnail map to " + MAX_THUMBNAIL_MAP_SIZE);
-        List<Integer> keys = new ArrayList<Integer>();
-        keys.addAll(mPhotoIdToThumbnailBitmapMap.keySet());
-        Random r = new Random();
-        while (mPhotoIdToThumbnailBitmapMap.size() > MAX_THUMBNAIL_MAP_SIZE) {
-          int ind = r.nextInt(keys.size());
-          mPhotoIdToThumbnailBitmapMap.remove(keys.get(ind));
-        }
-      }
-
-      mPhotoIdToThumbnailBitmapMap.put(mPhoto.getId(), mThumbnailBitmap);
+      mPhotoFile.addBitmapToMemoryCache(memCacheKeyFor(mPhoto), mThumbnailBitmap);
 
       int start = mGridView.getFirstVisiblePosition();
       for (
@@ -230,7 +214,9 @@ public class AlbumActivity extends Activity implements Observer {
     private Bitmap mThumbnailBitmap;
   }
 
-  private static final int MAX_THUMBNAIL_MAP_SIZE = 20;
+  private String memCacheKeyFor(PhotoInfo photo) {
+    return "thumbnail_" + photo.getId();
+  }
 
   private void assertBgndThread() {
     if (!isUIThread())
@@ -288,7 +274,7 @@ public class AlbumActivity extends Activity implements Observer {
 
       // If thumbnail exists for this photo, use it;
       // otherwise, build it asynchronously and refresh this item when it's available
-      Bitmap bitmap = getThumbnailForPhoto(photo);
+      Bitmap bitmap = mPhotoFile.getBitmapFromMemCache(memCacheKeyFor(photo));
       if (bitmap != null) {
         trace("using existing thumbnail " + nameOf(bitmap, false));
         imageView.setImageBitmap(bitmap);
@@ -323,17 +309,11 @@ public class AlbumActivity extends Activity implements Observer {
     }
   }
 
-  private Bitmap getThumbnailForPhoto(PhotoInfo photo) {
-    Bitmap bitmap = mPhotoIdToThumbnailBitmapMap.get(photo.getId());
-    return bitmap;
-  }
-
   private boolean mResumed;
   private IPoint mThumbSize;
   private boolean mTrace;
   private PhotoFile mPhotoFile;
   private GridView mGridView;
   private List<PhotoInfo> mPhotos = new ArrayList();
-  private Map<Integer, Bitmap> mPhotoIdToThumbnailBitmapMap = new HashMap();
   private Set<Integer> mThumbnailRequestedSet = new HashSet();
 }
