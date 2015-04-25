@@ -6,14 +6,22 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.support.v4.view.ViewPager;
 import android.view.View;
 import android.widget.ImageView;
+
+import android.widget.LinearLayout;
+
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
+import com.js.android.UITools;
 
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
 
 import static com.js.android.AndroidTools.*;
+import static com.js.basic.Tools.*;
 
 public class ViewPhotoActivity extends Activity implements Observer {
   private static final String PHOTO_ID_KEY = "photoid";
@@ -33,9 +41,9 @@ public class ViewPhotoActivity extends Activity implements Observer {
 
     mPhotoFile = AppState.photoFile(this);
     Bundle b = getIntent().getExtras();
-    if (b == null) throw new IllegalArgumentException();
-    mPhotoId = b.getInt(PHOTO_ID_KEY);
-
+    if (b == null)
+      throw new IllegalArgumentException();
+    mFocusPhotoId = b.getInt(PHOTO_ID_KEY);
 
     super.onCreate(savedInstanceState);
     setContentView(buildContentView());
@@ -46,23 +54,28 @@ public class ViewPhotoActivity extends Activity implements Observer {
     mResumed = true;
     super.onResume();
     mPhotoFile.addObserver(this);
-    displayDesiredPhotoIfPhotosReady();
+    addPhotoPagesIfPhotosReady();
   }
 
-  private void displayDesiredPhotoIfPhotosReady() {
+  private void addPhotoPagesIfPhotosReady() {
     if (!mPhotoFile.isOpen())
       return;
-    if (mPhotoInfo == null) {
-      List<PhotoInfo> list = mPhotoFile.getPhotos(mPhotoId, 1);
-      if (list.isEmpty())
-        return;
-      PhotoInfo info = list.get(0);
-      if (info.getId() != mPhotoId)
-        return;
-      mPhotoInfo = info;
+
+    MyAdapter adapter = adapter();
+    List<PhotoInfo> photos = mPhotoFile.getPhotos(0, Integer.MAX_VALUE);
+    adapter.clear();
+    int focusIndex = -1;
+    for (int cursor = 0; cursor < photos.size(); cursor++) {
+      PhotoInfo photoInfo = photos.get(cursor);
+      adapter.add(photoInfo.getId());
+      if (photoInfo.getId() == mFocusPhotoId)
+        focusIndex = cursor;
+
     }
-    // Attempt to load requested photo
-    mPhotoFile.getBitmap(this,mPhotoInfo);
+    adapter.notifyDataSetChanged();
+    if (focusIndex >= 0) {
+      mPager.setCurrentItem(focusIndex);
+    }
   }
 
   @Override
@@ -73,10 +86,13 @@ public class ViewPhotoActivity extends Activity implements Observer {
   }
 
   private View buildContentView() {
-    ImageView v = new ImageView(this);
-    v.setBackgroundColor(Color.BLUE);
-    mImageView = v;
-    return v;
+    LinearLayout layout = UITools.linearLayout(this, true);
+
+    mPager = new ViewPager(this);
+    mPager.setAdapter(new MyAdapter());
+
+    layout.addView(mPager, UITools.layoutParams(layout, 1.0f));
+    return layout;
   }
 
   // Observer interface
@@ -86,23 +102,63 @@ public class ViewPhotoActivity extends Activity implements Observer {
     Object[] params = (Object[]) data;
     switch ((PhotoFile.Event) params[0]) {
       case StateChanged:
-        displayDesiredPhotoIfPhotosReady();
+        addPhotoPagesIfPhotosReady();
         break;
       case BitmapConstructed: {
-        final PhotoInfo photo = (PhotoInfo) params[1];
-        if (photo.getId() != mPhotoId)
-          break;
-        final Bitmap bitmap = (Bitmap) params[2];
-        mImageView.setImageBitmap(bitmap);
+        PhotoInfo photo = (PhotoInfo) params[1];
+        Bitmap bitmap = (Bitmap) params[2];
+        adapter().bitmapArrived(photo, bitmap);
       }
       break;
     }
   }
 
+  private MyAdapter adapter() {
+    return (MyAdapter) mPager.getAdapter();
+  }
+
+  /**
+   * Adapter for list of photo ids, to be displayed in ViewPager
+   */
+  private class MyAdapter extends ListPageAdapter<Integer> {
+
+    @Override
+    public View createView(int position) {
+      ImageView imageView = new ImageView(ViewPhotoActivity.this);
+      imageView.setBackgroundColor(Color.BLACK);
+      return imageView;
+    }
+
+    @Override
+    public void initView(View v, Integer photoId, int position) {
+      ImageView view = (ImageView) v;
+      mViewToPhotoIdBiMap.forcePut(view, photoId);
+      view.setImageBitmap(null);
+
+      PhotoInfo info = mPhotoFile.getPhoto(photoId);
+      if (info == null) {
+        warning("no photo id " + photoId + " found");
+        return;
+      }
+      // Attempt to load bitmap for this photo
+      mPhotoFile.getBitmap(ViewPhotoActivity.this, info);
+    }
+
+    public void bitmapArrived(PhotoInfo photoInfo, Bitmap bitmap) {
+      ImageView view = mViewToPhotoIdBiMap.inverse().get(photoInfo.getId());
+      if (view == null) {
+        warning("no view corresponding to " + photoInfo);
+        return;
+      }
+      view.setImageBitmap(bitmap);
+    }
+  }
+
+  private ViewPager mPager;
+  // Bidirectional map to determine view <=> photo correspondence
+  private BiMap<ImageView, Integer> mViewToPhotoIdBiMap = HashBiMap.create();
   private PhotoFile mPhotoFile;
-  private ImageView mImageView;
-  private PhotoInfo mPhotoInfo;
-  private int mPhotoId;
+  private int mFocusPhotoId;
   private boolean mResumed;
 }
 

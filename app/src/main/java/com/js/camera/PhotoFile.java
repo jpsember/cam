@@ -56,7 +56,7 @@ public class PhotoFile extends Observable {
 
   public PhotoFile() {
     mState = State.Start;
-    setTrace(true);
+//    setTrace(true);
     doNothing();
     doNothingAndroid();
   }
@@ -422,6 +422,17 @@ public class PhotoFile extends Observable {
     assertOpen();
     TaskSequence t = new CreatePhotoTask(jpegData, imageSize, rotationToApply);
     t.start();
+  }
+
+  public PhotoInfo getPhoto(int photoId) {
+    List<PhotoInfo> list = getPhotos(photoId, 1);
+    PhotoInfo element = null;
+    if (!list.isEmpty()) {
+      element = list.get(0);
+      if (element.getId() != photoId)
+        element = null;
+    }
+    return element;
   }
 
   public List<PhotoInfo> getPhotos(int startId, int maxCount) {
