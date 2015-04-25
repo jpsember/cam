@@ -33,13 +33,23 @@ public class AlbumActivity extends Activity implements Observer {
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
     doNothingAndroid();
     AppState.prepare(this);
 //    setTrace(true);
 
     mPhotoFile = AppState.photoFile(this);
-    super.onCreate(savedInstanceState);
     setContentView(buildContentView());
+
+    if (savedInstanceState != null) {
+      mRestoredScrollPosition = savedInstanceState.getInt("gridview");
+    }
+  }
+
+  @Override
+  protected void onSaveInstanceState(Bundle outState) {
+    super.onSaveInstanceState(outState);
+    outState.putInt("gridview", mGridView.getFirstVisiblePosition());
   }
 
   @Override
@@ -58,6 +68,8 @@ public class AlbumActivity extends Activity implements Observer {
     mPhotos.clear();
     mPhotos.addAll(mPhotoFile.getPhotos(0, Integer.MAX_VALUE / 10));
     ((ImageAdapter) mGridView.getAdapter()).notifyDataSetChanged();
+    // Now that list has been populated, restore previously saved state
+    mGridView.setSelection(mRestoredScrollPosition);
   }
 
   @Override
@@ -92,12 +104,8 @@ public class AlbumActivity extends Activity implements Observer {
   }
 
   private View buildContentView() {
-    mGridView = buildGridView();
-    return mGridView;
-  }
-
-  public GridView buildGridView() {
     GridView v = new GridView(this);
+    mGridView = v;
 //    v.setBackgroundColor(Color.GREEN);
     unimp("use density pixels throughout");
     int spacing = 5;
@@ -118,7 +126,7 @@ public class AlbumActivity extends Activity implements Observer {
       }
     });
 
-    return v;
+    return mGridView;
   }
 
   // Observer interface
@@ -316,4 +324,5 @@ public class AlbumActivity extends Activity implements Observer {
   private GridView mGridView;
   private List<PhotoInfo> mPhotos = new ArrayList();
   private Set<Integer> mThumbnailRequestedSet = new HashSet();
+  private int mRestoredScrollPosition;
 }
