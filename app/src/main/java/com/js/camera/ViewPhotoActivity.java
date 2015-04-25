@@ -8,6 +8,9 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v4.view.ViewPager;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 
 import android.widget.LinearLayout;
@@ -86,12 +89,44 @@ public class ViewPhotoActivity extends Activity implements Observer {
   }
 
   private View buildContentView() {
-    LinearLayout layout = UITools.linearLayout(this, true);
+    // The container will be a FrameLayout, with the lower layer the
+    // ViewPager, and the upper layer the buttons.
 
-    mPager = new ViewPager(this);
-    mPager.setAdapter(new MyAdapter());
+    FrameLayout layout = new FrameLayout(this);
 
-    layout.addView(mPager, UITools.layoutParams(layout, 1.0f));
+    {
+      mPager = new ViewPager(this);
+      mPager.setAdapter(new MyAdapter());
+      layout.addView(mPager);
+    }
+
+    {
+      LinearLayout buttonContainer = UITools.linearLayout(this, false);
+      mButtons = buttonContainer;
+      layout.addView(buttonContainer, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
+          FrameLayout.LayoutParams.WRAP_CONTENT));
+
+      // Add spacer to take up all extra space to left
+      LinearLayout.LayoutParams params = UITools.layoutParams(buttonContainer, 1.0f);
+      buttonContainer.addView(new View(this), params);
+
+      // Add buttons
+      params = UITools.layoutParams(buttonContainer, 0f);
+      params.height = LinearLayout.LayoutParams.WRAP_CONTENT;
+
+      ImageButton button = new ImageButton(this);
+      button.setImageResource(android.R.drawable.ic_delete);
+      button.setOnClickListener(
+          new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+              deleteCurrentPhoto();
+            }
+          }
+      );
+      buttonContainer.addView(button, params);
+    }
+
     return layout;
   }
 
@@ -115,6 +150,10 @@ public class ViewPhotoActivity extends Activity implements Observer {
 
   private MyAdapter adapter() {
     return (MyAdapter) mPager.getAdapter();
+  }
+
+  private void deleteCurrentPhoto() {
+    unimp("delete current photo");
   }
 
   /**
@@ -158,6 +197,7 @@ public class ViewPhotoActivity extends Activity implements Observer {
   // Bidirectional map to determine view <=> photo correspondence
   private BiMap<ImageView, Integer> mViewToPhotoIdBiMap = HashBiMap.create();
   private PhotoFile mPhotoFile;
+  private ViewGroup mButtons;
   private int mFocusPhotoId;
   private boolean mResumed;
 }
