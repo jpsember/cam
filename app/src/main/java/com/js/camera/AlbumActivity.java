@@ -16,6 +16,7 @@ import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
 
+import com.js.android.UITools;
 import com.js.basic.IPoint;
 import com.js.camera.camera.R;
 
@@ -41,15 +42,13 @@ public class AlbumActivity extends Activity implements Observer {
     mPhotoFile = AppState.photoFile(this);
     setContentView(buildContentView());
 
-    if (savedInstanceState != null) {
-      mRestoredScrollPosition = savedInstanceState.getInt("gridview");
-    }
+    mSavedInstanceState = savedInstanceState;
   }
 
   @Override
   protected void onSaveInstanceState(Bundle outState) {
     super.onSaveInstanceState(outState);
-    outState.putInt("gridview", mGridView.getFirstVisiblePosition());
+    UITools.persist(outState, "album", mGridView);
   }
 
   @Override
@@ -69,7 +68,7 @@ public class AlbumActivity extends Activity implements Observer {
     mPhotos.addAll(mPhotoFile.getPhotos(0, Integer.MAX_VALUE / 10));
     ((ImageAdapter) mGridView.getAdapter()).notifyDataSetChanged();
     // Now that list has been populated, restore previously saved state
-    mGridView.setSelection(mRestoredScrollPosition);
+    UITools.restore(this, mSavedInstanceState, "album", mGridView);
   }
 
   @Override
@@ -324,5 +323,5 @@ public class AlbumActivity extends Activity implements Observer {
   private GridView mGridView;
   private List<PhotoInfo> mPhotos = new ArrayList();
   private Set<Integer> mThumbnailRequestedSet = new HashSet();
-  private int mRestoredScrollPosition;
+  private Bundle mSavedInstanceState;
 }
