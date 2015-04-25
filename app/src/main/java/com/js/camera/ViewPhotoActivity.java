@@ -29,6 +29,12 @@ import static com.js.basic.Tools.*;
 public class ViewPhotoActivity extends Activity implements Observer {
   private static final String PHOTO_ID_KEY = "photoid";
 
+  private enum ActivityState {
+    Paused,
+    Resumed,
+    PausePending,
+  }
+
   public static Intent buildIntentForPhoto(Context context, int photoId) {
     Intent intent = new Intent(context, ViewPhotoActivity.class);
     Bundle b = new Bundle();
@@ -54,8 +60,8 @@ public class ViewPhotoActivity extends Activity implements Observer {
 
   @Override
   protected void onResume() {
-    mResumed = true;
     super.onResume();
+    setState(ActivityState.Resumed);
     mPhotoFile.addObserver(this);
     addPhotoPagesIfPhotosReady();
   }
@@ -83,9 +89,9 @@ public class ViewPhotoActivity extends Activity implements Observer {
 
   @Override
   protected void onPause() {
-    mPhotoFile.deleteObserver(this);
     super.onPause();
-    mResumed = false;
+    mPhotoFile.deleteObserver(this);
+    setState(ActivityState.Paused);
   }
 
   private View buildContentView() {
@@ -112,8 +118,7 @@ public class ViewPhotoActivity extends Activity implements Observer {
         public void onPageScrollStateChanged(int state) {
           switch (state) {
             case ViewPager.SCROLL_STATE_IDLE:
-              if (!mPhotoDeleteStarted)
-                mButtons.setVisibility(View.VISIBLE);
+              updateButtonVisibility();
               break;
             case ViewPager.SCROLL_STATE_DRAGGING:
               mButtons.setVisibility(View.INVISIBLE);
@@ -148,13 +153,13 @@ public class ViewPhotoActivity extends Activity implements Observer {
           }
       );
       buttonContainer.addView(button, params);
-
-      unimp("refactor method of keeping buttons hidden if delete is being processed");
-      if (mPhotoDeleteStarted)
-        mButtons.setVisibility(View.INVISIBLE);
     }
 
     return layout;
+  }
+
+  private void updateButtonVisibility() {
+    mButtons.setVisibility((mState == ActivityState.Resumed) ? View.VISIBLE : View.INVISIBLE);
   }
 
   // Observer interface
@@ -184,9 +189,7 @@ public class ViewPhotoActivity extends Activity implements Observer {
    */
   private void deleteCurrentPhoto() {
     PhotoInfo photo = adapter().getCurrentPhoto();
-    // Make sure no additional button presses are acted upon
-    mPhotoDeleteStarted = true;
-    mButtons.setVisibility(View.INVISIBLE);
+    setState(ActivityState.PausePending);
     mPhotoFile.deletePhoto(photo, new Runnable() {
       @Override
       public void run() {
@@ -194,6 +197,11 @@ public class ViewPhotoActivity extends Activity implements Observer {
         finish();
       }
     });
+  }
+
+  private void setState(ActivityState state) {
+    mState = state;
+    updateButtonVisibility();
   }
 
   /**
@@ -236,13 +244,11 @@ public class ViewPhotoActivity extends Activity implements Observer {
     }
 
     public PhotoInfo getCurrentPhoto() {
-      PhotoInfo photoInfo = null;
       ImageView view = (ImageView) mPager.findViewWithTag("myview" + mPager.getCurrentItem());
       if (view == null) throw new IllegalStateException();
       Integer id = mViewToPhotoIdBiMap.get(view);
       if (id == null) throw new IllegalStateException();
-      photoInfo = mPhotoFile.getPhoto(id);
-      return photoInfo;
+      return mPhotoFile.getPhoto(id);
     }
   }
 
@@ -252,7 +258,5 @@ public class ViewPhotoActivity extends Activity implements Observer {
   private PhotoFile mPhotoFile;
   private ViewGroup mButtons;
   private int mFocusPhotoId;
-  private boolean mResumed;
-  private boolean mPhotoDeleteStarted;
+  private ActivityState mState = ActivityState.Paused;
 }
-
