@@ -82,18 +82,15 @@ public class ViewPhotoActivity extends Activity implements Observer {
     MyAdapter adapter = adapter();
     List<PhotoInfo> photos = mPhotoFile.getPhotos(0, Integer.MAX_VALUE);
     adapter.clear();
-    int focusIndex = -1;
     for (int cursor = 0; cursor < photos.size(); cursor++) {
       PhotoInfo photoInfo = photos.get(cursor);
       adapter.add(photoInfo.getId());
-      if (photoInfo.getId() == mFocusPhotoId) {
-        focusIndex = cursor;
-      }
     }
     adapter.notifyDataSetChanged();
-    if (focusIndex >= 0) {
-      mPager.setCurrentItem(focusIndex);
-    }
+
+    int focusPosition = adapter.getItems().indexOf(mFocusPhotoId);
+    if (focusPosition < 0) throw new IllegalStateException();
+    mPager.setCurrentItem(focusPosition);
   }
 
   @Override
@@ -239,7 +236,7 @@ public class ViewPhotoActivity extends Activity implements Observer {
       view.setImageBitmap(null);
 
       // This clunky code seems to be the best way to get the 'current' view
-      view.setTag("myview" + position);
+      view.setTag(buildTagForPosition(position));
 
       PhotoInfo info = mPhotoFile.getPhoto(photoId);
       if (info == null) {
@@ -260,11 +257,15 @@ public class ViewPhotoActivity extends Activity implements Observer {
     }
 
     public PhotoInfo getCurrentPhoto() {
-      ImageView view = (ImageView) mPager.findViewWithTag("myview" + mPager.getCurrentItem());
+      ImageView view = (ImageView) mPager.findViewWithTag(buildTagForPosition(mPager.getCurrentItem()));
       if (view == null) throw new IllegalStateException();
       Integer id = mViewToPhotoIdBiMap.get(view);
       if (id == null) throw new IllegalStateException();
       return mPhotoFile.getPhoto(id);
+    }
+
+    private String buildTagForPosition(int position) {
+      return "" + position;
     }
   }
 

@@ -89,6 +89,13 @@ abstract class ListPageAdapter<T> extends PagerAdapter {
     return mItems.remove(position);
   }
 
+  /**
+   * Get the list of items
+   */
+  public List<T> getItems() {
+    return mItems;
+  }
+
   // Views that can be reused.
   private final List<View> mRecycledViews = new ArrayList<View>();
   // Views that are already in use.
