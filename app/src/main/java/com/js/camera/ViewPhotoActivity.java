@@ -38,7 +38,8 @@ public class ViewPhotoActivity extends Activity implements Observer {
   public static Intent buildIntentForPhoto(Context context, int photoId) {
     Intent intent = new Intent(context, ViewPhotoActivity.class);
     Bundle b = new Bundle();
-    b.putInt(PHOTO_ID_KEY, photoId);
+    unimp("Give all photos ids strictly greater than zero");
+    b.putInt(PHOTO_ID_KEY, photoId + 1);
     intent.putExtras(b);
     return intent;
   }
@@ -47,15 +48,24 @@ public class ViewPhotoActivity extends Activity implements Observer {
   public void onCreate(Bundle savedInstanceState) {
     doNothingAndroid();
     AppState.prepare(this);
+    super.onCreate(savedInstanceState);
 
     mPhotoFile = AppState.photoFile(this);
-    Bundle b = getIntent().getExtras();
-    if (b == null)
-      throw new IllegalArgumentException();
-    mFocusPhotoId = b.getInt(PHOTO_ID_KEY);
 
-    super.onCreate(savedInstanceState);
     setContentView(buildContentView());
+
+    // If a saved state exists, read current photo from it
+    if (savedInstanceState != null)
+      mFocusPhotoId = savedInstanceState.getInt(PHOTO_ID_KEY);
+
+    // If no current photo defined, read from intent
+    if (mFocusPhotoId == 0) {
+      Bundle state = getIntent().getExtras();
+      if (state == null)
+        throw new IllegalArgumentException();
+      mFocusPhotoId = state.getInt(PHOTO_ID_KEY);
+    }
+    if (mFocusPhotoId == 0) throw new IllegalArgumentException();
   }
 
   @Override
@@ -77,7 +87,7 @@ public class ViewPhotoActivity extends Activity implements Observer {
     for (int cursor = 0; cursor < photos.size(); cursor++) {
       PhotoInfo photoInfo = photos.get(cursor);
       adapter.add(photoInfo.getId());
-      if (photoInfo.getId() == mFocusPhotoId) {
+      if (photoInfo.getId() + 1 == mFocusPhotoId) {
         focusIndex = cursor;
       }
     }
@@ -92,6 +102,12 @@ public class ViewPhotoActivity extends Activity implements Observer {
     super.onPause();
     mPhotoFile.deleteObserver(this);
     setState(ActivityState.Paused);
+  }
+
+  @Override
+  protected void onSaveInstanceState(Bundle outState) {
+    super.onSaveInstanceState(outState);
+    outState.putInt(PHOTO_ID_KEY, mFocusPhotoId);
   }
 
   private View buildContentView() {
@@ -119,6 +135,7 @@ public class ViewPhotoActivity extends Activity implements Observer {
           switch (state) {
             case ViewPager.SCROLL_STATE_IDLE:
               updateButtonVisibility();
+              mFocusPhotoId = 1 + adapter().getCurrentPhoto().getId();
               break;
             case ViewPager.SCROLL_STATE_DRAGGING:
               mButtons.setVisibility(View.INVISIBLE);
