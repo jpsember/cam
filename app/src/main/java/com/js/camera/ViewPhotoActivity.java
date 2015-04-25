@@ -38,8 +38,7 @@ public class ViewPhotoActivity extends Activity implements Observer {
   public static Intent buildIntentForPhoto(Context context, int photoId) {
     Intent intent = new Intent(context, ViewPhotoActivity.class);
     Bundle b = new Bundle();
-    unimp("Give all photos ids strictly greater than zero");
-    b.putInt(PHOTO_ID_KEY, photoId + 1);
+    b.putInt(PHOTO_ID_KEY, photoId);
     intent.putExtras(b);
     return intent;
   }
@@ -87,7 +86,7 @@ public class ViewPhotoActivity extends Activity implements Observer {
     for (int cursor = 0; cursor < photos.size(); cursor++) {
       PhotoInfo photoInfo = photos.get(cursor);
       adapter.add(photoInfo.getId());
-      if (photoInfo.getId() + 1 == mFocusPhotoId) {
+      if (photoInfo.getId() == mFocusPhotoId) {
         focusIndex = cursor;
       }
     }
@@ -135,7 +134,7 @@ public class ViewPhotoActivity extends Activity implements Observer {
           switch (state) {
             case ViewPager.SCROLL_STATE_IDLE:
               updateButtonVisibility();
-              mFocusPhotoId = 1 + adapter().getCurrentPhoto().getId();
+              mFocusPhotoId = adapter().getCurrentPhoto().getId();
               break;
             case ViewPager.SCROLL_STATE_DRAGGING:
               mButtons.setVisibility(View.INVISIBLE);

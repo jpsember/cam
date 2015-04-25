@@ -217,6 +217,10 @@ public class PhotoFile extends Observable {
           } catch (NumberFormatException e) {
             continue;
           }
+          if (id <= 0) {
+            warning("Skipping illegal photo id: " + id + " from " + fileStr);
+            continue;
+          }
           PhotoInfo photoInfo;
           try {
             File photoInfoPath = getPhotoInfoPath(id, false);
@@ -778,6 +782,6 @@ public class PhotoFile extends Observable {
   // These fields should only be accessed by the background thread
   private File mRootDirectory;
   private boolean mModified;
-  private int mNextPhotoId;
+  private int mNextPhotoId = 1;
   private SortedSet<PhotoInfo> mPhotoSet;
 }

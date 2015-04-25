@@ -45,7 +45,7 @@ public class PhotoInfo extends Freezable.Mutable {
   }
 
   public static int currentSecondsSinceEpoch() {
-    return  (int) (System.currentTimeMillis() / 1000);
+    return (int) (System.currentTimeMillis() / 1000);
   }
 
   public static PhotoInfo create() {
@@ -95,8 +95,13 @@ public class PhotoInfo extends Freezable.Mutable {
     return mTargetAgeState;
   }
 
+  /**
+   * Set photo's id.  These are positive integers
+   */
   public void setId(int id) {
     mutate();
+    if (id <= 0)
+      throw new IllegalArgumentException("Photo id must be positive");
     mId = id;
   }
 
