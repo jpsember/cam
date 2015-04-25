@@ -9,7 +9,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.AbsListView;
-import android.widget.GridView;
 import android.widget.LinearLayout;
 
 import static com.js.basic.Tools.*;
@@ -186,18 +185,50 @@ public final class UITools {
   private static final int POSITIVE_INTEGER_OFFSET = 1;
 
   /**
-   * Save widget's state prior to leaving an activity
+   * Save integer value prior to leaving an activity
    */
-  public static void persist(Bundle state, String key, View view) {
-    if (view == null)
+  public static void persist(Bundle state, String key, int value) {
+    state.putInt(key, value);
+  }
+
+  /**
+   * Save object's state prior to leaving an activity
+   *
+   * @param object a widget;
+   *               a warning is generated if object type unsupported
+   */
+  public static void persist(Bundle state, String key, Object object) {
+    if (object == null)
       return;
-    if (view instanceof AbsListView) {
-      AbsListView absListView = (AbsListView) view;
+
+    if (object instanceof AbsListView) {
+      AbsListView absListView = (AbsListView) object;
       String ourKey = "absListView:" + key;
       state.putInt(ourKey, POSITIVE_INTEGER_OFFSET + absListView.getFirstVisiblePosition());
-    } else {
-      warning("unable to persist " + nameOf(view));
+      return;
     }
+    warning("unable to persist " + nameOf(object));
+  }
+
+  /**
+   * Restore integer value
+   *
+   * @param activity           activity, to read value from intent if found
+   * @param savedInstanceState bundle being resumed from; if state is found here,
+   *                           it overrides any value found in the intent
+   */
+  public static int restore(Activity activity, Bundle savedInstanceState, String key, int defaultValue) {
+    int value = defaultValue;
+    if (savedInstanceState != null && savedInstanceState.containsKey(key)) {
+      value = savedInstanceState.getInt(key);
+    } else {
+      Intent intent = activity.getIntent();
+      Bundle b = intent.getExtras();
+      if (b != null && b.containsKey(key)) {
+        value = b.getInt(key);
+      }
+    }
+    return value;
   }
 
   /**
@@ -207,11 +238,10 @@ public final class UITools {
    * @param savedInstanceState bundle being resumed from; if state is found here,
    *                           it overrides any value found in the intent
    */
-  public static void restore(Activity activity, Bundle savedInstanceState, String key, View view) {
-    if (view == null)
-      return;
-    if (view instanceof AbsListView) {
-      AbsListView absListView = (AbsListView) view;
+  public static void restore(Activity activity, Bundle savedInstanceState, String key, Object object) {
+
+    if (object instanceof AbsListView) {
+      AbsListView absListView = (AbsListView) object;
       String ourKey = "absListView:" + key;
       int scrollPosition = 0;
       if (savedInstanceState != null) {
@@ -226,9 +256,9 @@ public final class UITools {
       }
       if (scrollPosition != 0)
         absListView.setSelection(scrollPosition - POSITIVE_INTEGER_OFFSET);
-    } else {
-      warning("unable to restore " + nameOf(view));
+      return;
     }
+    warning("unable to restore " + nameOf(object));
   }
 
   private static int sDebugColorIndex;

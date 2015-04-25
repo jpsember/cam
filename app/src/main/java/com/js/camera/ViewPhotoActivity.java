@@ -52,19 +52,9 @@ public class ViewPhotoActivity extends Activity implements Observer {
     mPhotoFile = AppState.photoFile(this);
 
     setContentView(buildContentView());
-
-    // If a saved state exists, read current photo from it
-    if (savedInstanceState != null)
-      mFocusPhotoId = savedInstanceState.getInt(PHOTO_ID_KEY);
-
-    // If no current photo defined, read from intent
-    if (mFocusPhotoId == 0) {
-      Bundle state = getIntent().getExtras();
-      if (state == null)
-        throw new IllegalArgumentException();
-      mFocusPhotoId = state.getInt(PHOTO_ID_KEY);
-    }
-    if (mFocusPhotoId == 0) throw new IllegalArgumentException();
+    mFocusPhotoId = UITools.restore(this, savedInstanceState, PHOTO_ID_KEY, 0);
+    if (mFocusPhotoId == 0)
+      throw new IllegalArgumentException();
   }
 
   @Override
@@ -103,7 +93,7 @@ public class ViewPhotoActivity extends Activity implements Observer {
   @Override
   protected void onSaveInstanceState(Bundle outState) {
     super.onSaveInstanceState(outState);
-    outState.putInt(PHOTO_ID_KEY, mFocusPhotoId);
+    UITools.persist(outState, PHOTO_ID_KEY, mFocusPhotoId);
   }
 
   private View buildContentView() {
