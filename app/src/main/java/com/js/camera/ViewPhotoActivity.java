@@ -72,7 +72,6 @@ public class ViewPhotoActivity extends Activity implements Observer {
       PhotoInfo photoInfo = photos.get(cursor);
       adapter.add(photoInfo.getId());
       if (photoInfo.getId() == mFocusPhotoId) {
-        mCurrentPhoto = photoInfo;
         focusIndex = cursor;
       }
     }
@@ -173,10 +172,6 @@ public class ViewPhotoActivity extends Activity implements Observer {
         adapter().bitmapArrived(photo, bitmap);
       }
       break;
-      case PhotoDeleted: {
-        this.finish();
-      }
-      break;
     }
   }
 
@@ -184,21 +179,21 @@ public class ViewPhotoActivity extends Activity implements Observer {
     return (MyAdapter) mPager.getAdapter();
   }
 
+  /**
+   * Delete the currently displayed photo
+   */
   private void deleteCurrentPhoto() {
-    int currentId = adapter().getCurrentPhotoId();
-    if (currentId < 0) {
-      warning("no current photo!");
-      return;
-    }
-    PhotoInfo photo = mPhotoFile.getPhoto(currentId);
-    if (photo == null) {
-      warning("no such photo!");
-      return;
-    }
+    PhotoInfo photo = adapter().getCurrentPhoto();
     // Make sure no additional button presses are acted upon
     mPhotoDeleteStarted = true;
     mButtons.setVisibility(View.INVISIBLE);
-    mPhotoFile.deletePhoto(photo);
+    mPhotoFile.deletePhoto(photo, new Runnable() {
+      @Override
+      public void run() {
+        // Quit the activity
+        finish();
+      }
+    });
   }
 
   /**
@@ -240,14 +235,14 @@ public class ViewPhotoActivity extends Activity implements Observer {
       view.setImageBitmap(bitmap);
     }
 
-    public int getCurrentPhotoId() {
-      int currentId = -1;
+    public PhotoInfo getCurrentPhoto() {
+      PhotoInfo photoInfo = null;
       ImageView view = (ImageView) mPager.findViewWithTag("myview" + mPager.getCurrentItem());
-      if (view != null) {
-        Integer id = mViewToPhotoIdBiMap.get(view);
-        if (id != null) currentId = id;
-      }
-      return currentId;
+      if (view == null) throw new IllegalStateException();
+      Integer id = mViewToPhotoIdBiMap.get(view);
+      if (id == null) throw new IllegalStateException();
+      photoInfo = mPhotoFile.getPhoto(id);
+      return photoInfo;
     }
   }
 
@@ -257,7 +252,6 @@ public class ViewPhotoActivity extends Activity implements Observer {
   private PhotoFile mPhotoFile;
   private ViewGroup mButtons;
   private int mFocusPhotoId;
-  private PhotoInfo mCurrentPhoto;
   private boolean mResumed;
   private boolean mPhotoDeleteStarted;
 }

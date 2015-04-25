@@ -48,6 +48,8 @@ public class PhotoFile extends Observable {
 
   private static final int PHOTO_LIFETIME_DAYS = 30;
 
+  private static final boolean SIMULATE_DELETE_PHOTO = true;
+
   public static enum Event {
     StateChanged,
     PhotoCreated,
@@ -464,10 +466,14 @@ public class PhotoFile extends Observable {
     protected void execute(int stageNumber) {
       switch (stageNumber) {
         case 0: {
-          File f = getPhotoInfoPath(mPhotoInfo.getId(), false);
-          f.delete();
-          f = getPhotoBitmapPath(mPhotoInfo.getId(), false);
-          f.delete();
+          File infoPath = getPhotoInfoPath(mPhotoInfo.getId(), false);
+          File bitmapPath = getPhotoBitmapPath(mPhotoInfo.getId(), false);
+          if (SIMULATE_DELETE_PHOTO) {
+            warning("simulating deletion of photo");
+            break;
+          }
+          infoPath.delete();
+          bitmapPath.delete();
         }
         break;
         case 1:
@@ -481,9 +487,10 @@ public class PhotoFile extends Observable {
     private final PhotoInfo mPhotoInfo;
   }
 
-  public void deletePhoto(PhotoInfo photoInfo) {
+  public void deletePhoto(PhotoInfo photoInfo, Runnable completionCallback) {
     assertOpen();
     TaskSequence t = new DeletePhotoTask(photoInfo);
+    t.setCompletionCallback(completionCallback);
     t.start();
   }
 

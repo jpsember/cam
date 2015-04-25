@@ -48,6 +48,12 @@ public abstract class TaskSequence {
     return this;
   }
 
+  public TaskSequence setCompletionCallback(Runnable callback) {
+    assertStarted(false);
+    mCompletionCallback = callback;
+    return this;
+  }
+
   /**
    * Execute the next stage of the task.  The last task must call finish() when it has completed
    *
@@ -67,6 +73,9 @@ public abstract class TaskSequence {
    */
   protected void finish() {
     setState(State.FINISHED);
+    if (mCompletionCallback != null) {
+      AppState.postUIEvent(mCompletionCallback);
+    }
   }
 
   private void startNextStage() {
@@ -114,6 +123,8 @@ public abstract class TaskSequence {
   private State nState = State.WAITING;
   private Runnable nRunnable;
   private int nStage;
+  // Optional callback to be made on UI thread when task completes normally
+  private Runnable mCompletionCallback;
   // Only used if a simulated delay has been specified:
   private Random nRandom;
   private int nSleepTime;
