@@ -71,9 +71,10 @@ public class ViewPhotoActivity extends Activity implements Observer {
     for (int cursor = 0; cursor < photos.size(); cursor++) {
       PhotoInfo photoInfo = photos.get(cursor);
       adapter.add(photoInfo.getId());
-      if (photoInfo.getId() == mFocusPhotoId)
+      if (photoInfo.getId() == mFocusPhotoId) {
+        mCurrentPhoto = photoInfo;
         focusIndex = cursor;
-
+      }
     }
     adapter.notifyDataSetChanged();
     if (focusIndex >= 0) {
@@ -98,6 +99,29 @@ public class ViewPhotoActivity extends Activity implements Observer {
       mPager = new ViewPager(this);
       mPager.setAdapter(new MyAdapter());
       layout.addView(mPager);
+
+      mPager.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+        @Override
+        public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+        }
+
+        @Override
+        public void onPageSelected(int position) {
+        }
+
+        @Override
+        public void onPageScrollStateChanged(int state) {
+          switch (state) {
+            case ViewPager.SCROLL_STATE_IDLE:
+              if (!mPhotoDeleteStarted)
+                mButtons.setVisibility(View.VISIBLE);
+              break;
+            case ViewPager.SCROLL_STATE_DRAGGING:
+              mButtons.setVisibility(View.INVISIBLE);
+              break;
+          }
+        }
+      });
     }
 
     {
@@ -125,6 +149,10 @@ public class ViewPhotoActivity extends Activity implements Observer {
           }
       );
       buttonContainer.addView(button, params);
+
+      unimp("refactor method of keeping buttons hidden if delete is being processed");
+      if (mPhotoDeleteStarted)
+        mButtons.setVisibility(View.INVISIBLE);
     }
 
     return layout;
@@ -145,6 +173,10 @@ public class ViewPhotoActivity extends Activity implements Observer {
         adapter().bitmapArrived(photo, bitmap);
       }
       break;
+      case PhotoDeleted: {
+        this.finish();
+      }
+      break;
     }
   }
 
@@ -153,7 +185,20 @@ public class ViewPhotoActivity extends Activity implements Observer {
   }
 
   private void deleteCurrentPhoto() {
-    unimp("delete current photo");
+    int currentId = adapter().getCurrentPhotoId();
+    if (currentId < 0) {
+      warning("no current photo!");
+      return;
+    }
+    PhotoInfo photo = mPhotoFile.getPhoto(currentId);
+    if (photo == null) {
+      warning("no such photo!");
+      return;
+    }
+    // Make sure no additional button presses are acted upon
+    mPhotoDeleteStarted = true;
+    mButtons.setVisibility(View.INVISIBLE);
+    mPhotoFile.deletePhoto(photo);
   }
 
   /**
@@ -174,6 +219,9 @@ public class ViewPhotoActivity extends Activity implements Observer {
       mViewToPhotoIdBiMap.forcePut(view, photoId);
       view.setImageBitmap(null);
 
+      // This clunky code seems to be the best way to get the 'current' view
+      view.setTag("myview" + position);
+
       PhotoInfo info = mPhotoFile.getPhoto(photoId);
       if (info == null) {
         warning("no photo id " + photoId + " found");
@@ -191,6 +239,16 @@ public class ViewPhotoActivity extends Activity implements Observer {
       }
       view.setImageBitmap(bitmap);
     }
+
+    public int getCurrentPhotoId() {
+      int currentId = -1;
+      ImageView view = (ImageView) mPager.findViewWithTag("myview" + mPager.getCurrentItem());
+      if (view != null) {
+        Integer id = mViewToPhotoIdBiMap.get(view);
+        if (id != null) currentId = id;
+      }
+      return currentId;
+    }
   }
 
   private ViewPager mPager;
@@ -199,6 +257,8 @@ public class ViewPhotoActivity extends Activity implements Observer {
   private PhotoFile mPhotoFile;
   private ViewGroup mButtons;
   private int mFocusPhotoId;
+  private PhotoInfo mCurrentPhoto;
   private boolean mResumed;
+  private boolean mPhotoDeleteStarted;
 }
 

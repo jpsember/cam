@@ -52,6 +52,7 @@ public class PhotoFile extends Observable {
     StateChanged,
     PhotoCreated,
     BitmapConstructed,
+    PhotoDeleted,
   }
 
   public PhotoFile() {
@@ -447,6 +448,43 @@ public class PhotoFile extends Observable {
       }
     }
     return list;
+  }
+
+  private class DeletePhotoTask extends TaskSequence {
+    public DeletePhotoTask(PhotoInfo photoInfo) {
+      if (true) {
+        warning("adding delay");
+        this.addSimulatedDelays(500);
+      }
+      photoInfo.assertFrozen();
+      mPhotoInfo = photoInfo;
+    }
+
+    @Override
+    protected void execute(int stageNumber) {
+      switch (stageNumber) {
+        case 0: {
+          File f = getPhotoInfoPath(mPhotoInfo.getId(), false);
+          f.delete();
+          f = getPhotoBitmapPath(mPhotoInfo.getId(), false);
+          f.delete();
+        }
+        break;
+        case 1:
+          mPhotoSet.remove(mPhotoInfo);
+          notifyEventObservers(Event.PhotoDeleted, mPhotoInfo);
+          finish();
+          break;
+      }
+    }
+
+    private final PhotoInfo mPhotoInfo;
+  }
+
+  public void deletePhoto(PhotoInfo photoInfo) {
+    assertOpen();
+    TaskSequence t = new DeletePhotoTask(photoInfo);
+    t.start();
   }
 
   private class GetAgedPhotoTask extends TaskSequence {
