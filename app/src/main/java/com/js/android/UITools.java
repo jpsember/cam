@@ -3,8 +3,12 @@ package com.js.android;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Configuration;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
+import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup.LayoutParams;
@@ -261,6 +265,45 @@ public final class UITools {
     warning("unable to restore " + nameOf(object));
   }
 
+  public static void prepare(Context context) {
+    if (prepared())
+      return;
+    sDisplayMetrics = context.getResources().getDisplayMetrics();
+    sConfiguration = context.getResources().getConfiguration();
+  }
+
+  public static DisplayMetrics displayMetrics() {
+    if (!prepared()) throw new IllegalStateException("UITools not prepared");
+    return sDisplayMetrics;
+  }
+
+  public static Configuration configuration() {
+    if (!prepared()) throw new IllegalStateException("UITools not prepared");
+    return sConfiguration;
+  }
+
+  public static int dpToPixels(float densityPixels) {
+    return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, densityPixels, displayMetrics());
+  }
+
+  public static int screenSize() {
+    return configuration().screenLayout &
+        Configuration.SCREENLAYOUT_SIZE_MASK;
+  }
+
+  /**
+   * Determine if device is 'smallish'; normal or smaller
+   */
+  public static boolean smallScreenSize() {
+    return screenSize() <= Configuration.SCREENLAYOUT_SIZE_NORMAL;
+  }
+
+  private static boolean prepared() {
+    return sConfiguration != null;
+  }
+
+  private static Configuration sConfiguration;
+  private static DisplayMetrics sDisplayMetrics;
   private static int sDebugColorIndex;
 
 }

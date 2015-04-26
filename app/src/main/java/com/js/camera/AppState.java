@@ -6,6 +6,7 @@ import android.os.HandlerThread;
 import android.os.Looper;
 
 import com.js.android.AppPreferences;
+import com.js.android.UITools;
 
 import static com.js.basic.Tools.*;
 import static com.js.android.AndroidTools.*;
@@ -20,6 +21,7 @@ public class AppState {
     if (prepared())
       return;
     startApp(context);
+    UITools.prepare(context);
     showFreeMemory(context, "Starting app");
     AppPreferences.prepare(context);
     sUIThreadHandler = new Handler(Looper.getMainLooper());

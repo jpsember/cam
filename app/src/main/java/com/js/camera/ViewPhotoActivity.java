@@ -216,6 +216,7 @@ public class ViewPhotoActivity extends Activity implements Observer {
     public View createView(int position) {
       ImageView imageView = new ImageView(ViewPhotoActivity.this);
       imageView.setBackgroundColor(Color.BLACK);
+      imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
       return imageView;
     }
 

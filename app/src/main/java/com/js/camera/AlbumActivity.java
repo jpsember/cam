@@ -105,10 +105,9 @@ public class AlbumActivity extends Activity implements Observer {
   private View buildContentView() {
     GridView v = new GridView(this);
     mGridView = v;
-//    v.setBackgroundColor(Color.GREEN);
-    unimp("use density pixels throughout");
-    int spacing = 5;
-    mThumbSize = new IPoint(350 - spacing, 350 - spacing);
+    int spacing = UITools.dpToPixels(5);
+    int thumbSize = UITools.dpToPixels(UITools.smallScreenSize() ? 120 : 200);
+    mThumbSize = new IPoint(thumbSize - spacing, thumbSize - spacing);
     v.setColumnWidth(mThumbSize.x + spacing);
     v.setNumColumns(GridView.AUTO_FIT);
     v.setVerticalSpacing(spacing);
@@ -268,7 +267,6 @@ public class AlbumActivity extends Activity implements Observer {
       if (convertView == null) {
         // if it's not recycled, initialize some attributes
         imageView = new ImageView(context());
-        imageView.setLayoutParams(new GridView.LayoutParams(mThumbSize.x, mThumbSize.y));
         imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
         trace("getView position " + position + " =>    built " + nameOf(imageView));
       } else {
