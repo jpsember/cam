@@ -82,7 +82,7 @@ public class GraphicsExperimentActivity extends Activity {
     private void constructImage() {
       constructCanvas();
 
-      int gridCellSize = 120;
+      int gridCellSize = 32;
       IPoint gridSize = new IPoint((int) (mBitmap.getWidth() / (float) gridCellSize),
           (int) (mBitmap.getHeight() / (float) gridCellSize));
       PerlinNoise noise = new PerlinNoise(gridSize);
@@ -98,7 +98,8 @@ public class GraphicsExperimentActivity extends Activity {
           float gx = px / (float) gridCellSize;
 
           float value = noise.noiseAt(gx, gy);
-          int gray = (int) (value * 255);
+          value = (value + 1) / 2;
+          int gray = (int) (value * 255.99f);
           int color = Color.argb(0xff, gray, gray, gray);
           mBitmap.setPixel(px, py, color);
         }
@@ -153,20 +154,18 @@ public class GraphicsExperimentActivity extends Activity {
 
     /**
      * Evaluate noise value at a pixel, where integer portion of coordinate
-     * represents grid cell index
+     * represents grid cell index.
+     *
+     * @return value within [-1..1)
      */
     public float noiseAt(float x, float y) {
-
-      boolean db = (x >= 7 && x < 8 && y >= 3 && y < 4);
-      db = false;
-
       int cellX = (int) x;
       int cellY = (int) y;
+      if (cellX < 0 || cellX >= mGridSize.x || cellY < 0 || cellY >= mGridSize.y) {
+        throw new IllegalArgumentException();
+      }
       float gridX = cellX;
       float gridY = cellY;
-
-      if (cellX < 0 || cellY < 0 || cellX >= mGridSize.x || cellY >= mGridSize.y)
-        throw new IllegalArgumentException();
 
       int floatsPerGridRow = (1 + mGridSize.x) * 2;
       int gi = cellY * floatsPerGridRow + 2 * cellX;
@@ -175,28 +174,20 @@ public class GraphicsExperimentActivity extends Activity {
       float sy = y - gridY;
       if (sx < 0 || sx > 1 || sy < 0 || sy > 1) throw new IllegalArgumentException();
 
-      if (db) pr("Noise at " + d(x) + d(y) + " s=" + d(sx) + d(sy));
-
       float d00 = dotGridGradient(gi + 0, gridX + 0, gridY, x, y);
       float d10 = dotGridGradient(gi + 2, gridX + 1, gridY, x, y);
       float aValue = lerp(d00, d10, sx);
-      if (db) pr(" d00=" + d(d00));
-      if (db) pr(" d10=" + d(d10));
-      if (db) pr("   va=" + d(aValue));
 
       gridY += 1;
       gi += floatsPerGridRow;
       float d01 = dotGridGradient(gi + 0, gridX + 0, gridY, x, y);
       float d11 = dotGridGradient(gi + 2, gridX + 1, gridY, x, y);
       float bValue = lerp(d01, d11, sx);
-      if (db) pr(" d01=" + d(d01));
-      if (db) pr(" d11=" + d(d11));
-      if (db) pr("   vb=" + d(bValue));
 
       float value = lerp(aValue, bValue, sy);
-      if (db) pr("    v=" + d(value));
+      if (value < -1 || value >= 1) throw new IllegalArgumentException();
+
       value = (value + 1.0f) * .5f;
-      if (db) pr("   nv=" + d(value));
       return value;
     }
 
