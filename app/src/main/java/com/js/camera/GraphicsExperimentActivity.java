@@ -1,6 +1,7 @@
 package com.js.camera;
 
 import android.app.Activity;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -9,6 +10,7 @@ import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
+import com.js.android.UITools;
 import com.js.basic.IPoint;
 import com.js.basic.MyMath;
 
@@ -82,7 +84,7 @@ public class GraphicsExperimentActivity extends Activity {
     private void constructImage() {
       constructCanvas();
 
-      int gridCellSize = 64;
+      int gridCellSize = 16;
       IPoint gridSize = new IPoint((int) (mBitmap.getWidth() / (float) gridCellSize),
           (int) (mBitmap.getHeight() / (float) gridCellSize));
       PerlinNoise noise = new PerlinNoise(gridSize);
@@ -93,19 +95,6 @@ public class GraphicsExperimentActivity extends Activity {
       int gridHeightPixels = gridSize.y * gridCellSize;
 
       for (int py = 0; py < gridHeightPixels; py++) {
-        if (py == 0) {
-          noise.setInterpolation(PerlinNoise.Interpolation.LINEAR);
-          continue;
-        } else if (py == gridHeightPixels / 4) {
-          noise.setInterpolation(PerlinNoise.Interpolation.CUBIC);
-          continue;
-        } else if (py == gridHeightPixels / 4 * 2) {
-          noise.setInterpolation(PerlinNoise.Interpolation.QUINTIC);
-          continue;
-        } else if (py == gridHeightPixels / 4 * 3) {
-          noise.setInterpolation(PerlinNoise.Interpolation.COSINE);
-          continue;
-        }
         float gy = py / (float) gridCellSize;
         for (int px = 0; px < gridWidthPixels; px++) {
           float gx = px / (float) gridCellSize;
@@ -120,7 +109,7 @@ public class GraphicsExperimentActivity extends Activity {
     }
 
     private void constructCanvas() {
-      IPoint targetSize = PhotoInfo.getLogicalMaximumSize(true);
+      IPoint targetSize = PhotoInfo.getLogicalMaximumSize(UITools.configuration().orientation == Configuration.ORIENTATION_PORTRAIT);
       mBitmap = Bitmap.createBitmap(targetSize.x, targetSize.y, Bitmap.Config.ARGB_8888);
       mCanvas = new Canvas();
       mCanvas.setBitmap(mBitmap);
@@ -139,7 +128,6 @@ public class GraphicsExperimentActivity extends Activity {
       LINEAR,
       CUBIC,
       QUINTIC,
-      COSINE,
     }
 
     public PerlinNoise(IPoint gridSize) {
@@ -180,9 +168,6 @@ public class GraphicsExperimentActivity extends Activity {
           w = 6 * w5 - 15 * w4 + 10 * w3;
         }
         break;
-        case COSINE:
-          w = (float) (1 - Math.cos(w * Math.PI)) / 2;
-          break;
       }
       return (1.0f - w) * a0 + w * a1;
     }
