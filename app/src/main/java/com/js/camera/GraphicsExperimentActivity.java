@@ -88,7 +88,7 @@ public class GraphicsExperimentActivity extends Activity {
       IPoint gridSize = new IPoint((int) (mBitmap.getWidth() / (float) gridCellSize),
           (int) (mBitmap.getHeight() / (float) gridCellSize));
       PerlinNoise noise = new PerlinNoise(gridSize);
-      noise.setTileSize(8);
+//      noise.setTileSize(8);
       noise.buildGrid();
 
       int gridWidthPixels = gridSize.x * gridCellSize;
@@ -138,6 +138,10 @@ public class GraphicsExperimentActivity extends Activity {
       mTileSize = tileSize;
     }
 
+    public void setMaxGradients(int maxGradients) {
+      mMaxGradients = maxGradients;
+    }
+
     public void buildGrid() {
       buildGradients();
     }
@@ -146,7 +150,12 @@ public class GraphicsExperimentActivity extends Activity {
       mInterpolation = interpolation;
     }
 
-    private float dotGridGradient(int gradientIndex, float xGrid, float yGrid, float xQuery, float yQuery) {
+    private int getGradientIndex(int xGrid, int yGrid) {
+      return (yGrid * (mGridSize.x + 1) + xGrid) * 2;
+    }
+
+    private float dotGridGradient(float xGrid, float yGrid, float xQuery, float yQuery) {
+      int gradientIndex = getGradientIndex((int) xGrid, (int) yGrid);
       float dx = xQuery - xGrid;
       float dy = yQuery - yGrid;
       float xGrad = mGradients[gradientIndex + 0];
@@ -191,21 +200,17 @@ public class GraphicsExperimentActivity extends Activity {
       float gridX = cellX;
       float gridY = cellY;
 
-      int floatsPerGridRow = (1 + mGridSize.x) * 2;
-      int gi = cellY * floatsPerGridRow + 2 * cellX;
-
       float sx = x - gridX;
       float sy = y - gridY;
       if (sx < 0 || sx > 1 || sy < 0 || sy > 1) throw new IllegalArgumentException();
 
-      float d00 = dotGridGradient(gi + 0, gridX + 0, gridY, x, y);
-      float d10 = dotGridGradient(gi + 2, gridX + 1, gridY, x, y);
+      float d00 = dotGridGradient(gridX + 0, gridY, x, y);
+      float d10 = dotGridGradient(gridX + 1, gridY, x, y);
       float aValue = lerp(d00, d10, sx);
 
       gridY += 1;
-      gi += floatsPerGridRow;
-      float d01 = dotGridGradient(gi + 0, gridX + 0, gridY, x, y);
-      float d11 = dotGridGradient(gi + 2, gridX + 1, gridY, x, y);
+      float d01 = dotGridGradient(gridX + 0, gridY, x, y);
+      float d11 = dotGridGradient(gridX + 1, gridY, x, y);
       float bValue = lerp(d01, d11, sx);
 
       float value = lerp(aValue, bValue, sy);
@@ -218,7 +223,9 @@ public class GraphicsExperimentActivity extends Activity {
 
       // There is a grid point at each cell corner, thus
       // we must add 1 to each dimension
-      int numGradients = (mGridSize.x + 1) * (mGridSize.y + 1);
+      int numGradients = mMaxGradients;
+      if (numGradients == 0)
+        numGradients = (mGridSize.x + 1) * (mGridSize.y + 1);
       mGradients = new float[2 * numGradients];
 
       int cursor = 0;
@@ -234,6 +241,8 @@ public class GraphicsExperimentActivity extends Activity {
       }
 
       if (mTileSize > 0) {
+        if (mMaxGradients != 0)
+          throw new UnsupportedOperationException("tiling not supported with reduced gradients");
         cursor = 0;
         for (int y = 0; y <= mGridSize.y; y++) {
           int ysrc = y % mTileSize;
@@ -248,9 +257,11 @@ public class GraphicsExperimentActivity extends Activity {
       }
     }
 
+
     private IPoint mGridSize;
     private float[] mGradients;
     private Interpolation mInterpolation = Interpolation.CUBIC;
     private int mTileSize;
+    private int mMaxGradients;
   }
 }
