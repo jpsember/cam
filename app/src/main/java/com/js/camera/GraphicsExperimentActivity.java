@@ -82,7 +82,7 @@ public class GraphicsExperimentActivity extends Activity {
     private void constructImage() {
       constructCanvas();
 
-      int gridCellSize = 32;
+      int gridCellSize = 64;
       IPoint gridSize = new IPoint((int) (mBitmap.getWidth() / (float) gridCellSize),
           (int) (mBitmap.getHeight() / (float) gridCellSize));
       PerlinNoise noise = new PerlinNoise(gridSize);
@@ -93,6 +93,19 @@ public class GraphicsExperimentActivity extends Activity {
       int gridHeightPixels = gridSize.y * gridCellSize;
 
       for (int py = 0; py < gridHeightPixels; py++) {
+        if (py == 0) {
+          noise.setInterpolation(PerlinNoise.Interpolation.LINEAR);
+          continue;
+        } else if (py == gridHeightPixels / 4) {
+          noise.setInterpolation(PerlinNoise.Interpolation.CUBIC);
+          continue;
+        } else if (py == gridHeightPixels / 4 * 2) {
+          noise.setInterpolation(PerlinNoise.Interpolation.QUINTIC);
+          continue;
+        } else if (py == gridHeightPixels / 4 * 3) {
+          noise.setInterpolation(PerlinNoise.Interpolation.COSINE);
+          continue;
+        }
         float gy = py / (float) gridCellSize;
         for (int px = 0; px < gridWidthPixels; px++) {
           float gx = px / (float) gridCellSize;
@@ -103,14 +116,11 @@ public class GraphicsExperimentActivity extends Activity {
           int color = Color.argb(0xff, gray, gray, gray);
           mBitmap.setPixel(px, py, color);
         }
-        if (py == gridHeightPixels / 2) {
-          noise.setCosineInterpolation(true);
-        }
       }
     }
 
     private void constructCanvas() {
-      IPoint targetSize = PhotoInfo.getLogicalMaximumSize(false);
+      IPoint targetSize = PhotoInfo.getLogicalMaximumSize(true);
       mBitmap = Bitmap.createBitmap(targetSize.x, targetSize.y, Bitmap.Config.ARGB_8888);
       mCanvas = new Canvas();
       mCanvas.setBitmap(mBitmap);
@@ -125,6 +135,13 @@ public class GraphicsExperimentActivity extends Activity {
 
   private static class PerlinNoise {
 
+    public static enum Interpolation {
+      LINEAR,
+      CUBIC,
+      QUINTIC,
+      COSINE,
+    }
+
     public PerlinNoise(IPoint gridSize) {
       mGridSize = gridSize;
     }
@@ -133,8 +150,8 @@ public class GraphicsExperimentActivity extends Activity {
       buildGradients();
     }
 
-    public void setCosineInterpolation(boolean state) {
-      mCosineInterpolation = state;
+    public void setInterpolation(Interpolation interpolation) {
+      mInterpolation = interpolation;
     }
 
     private float dotGridGradient(int gradientIndex, float xGrid, float yGrid, float xQuery, float yQuery) {
@@ -146,8 +163,26 @@ public class GraphicsExperimentActivity extends Activity {
     }
 
     private float lerp(float a0, float a1, float w) {
-      if (mCosineInterpolation) {
-        w = (float) (1 - Math.cos(w * Math.PI)) / 2;
+      switch (mInterpolation) {
+        case LINEAR:
+          break;
+        case CUBIC: {
+          float w2 = w * w;
+          float w3 = w2 * w;
+          w = -2 * w3 + 3 * w2;
+        }
+        break;
+        case QUINTIC: {
+          float w2 = w * w;
+          float w3 = w2 * w;
+          float w4 = w3 * w;
+          float w5 = w4 * w;
+          w = 6 * w5 - 15 * w4 + 10 * w3;
+        }
+        break;
+        case COSINE:
+          w = (float) (1 - Math.cos(w * Math.PI)) / 2;
+          break;
       }
       return (1.0f - w) * a0 + w * a1;
     }
@@ -186,8 +221,6 @@ public class GraphicsExperimentActivity extends Activity {
 
       float value = lerp(aValue, bValue, sy);
       if (value < -1 || value >= 1) throw new IllegalArgumentException();
-
-      value = (value + 1.0f) * .5f;
       return value;
     }
 
@@ -214,6 +247,6 @@ public class GraphicsExperimentActivity extends Activity {
 
     private IPoint mGridSize;
     private float[] mGradients;
-    private boolean mCosineInterpolation;
+    private Interpolation mInterpolation = Interpolation.CUBIC;
   }
 }
