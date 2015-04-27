@@ -86,7 +86,7 @@ public class GraphicsExperimentActivity extends Activity {
     private void constructImage() {
       constructCanvas();
 
-      int gridCellSize = 64;
+      int gridCellSize = 120;
       IPoint gridSize = new IPoint((int) (mBitmap.getWidth() / (float) gridCellSize),
           (int) (mBitmap.getHeight() / (float) gridCellSize));
       PerlinNoise noise = new PerlinNoise(gridSize);
@@ -133,27 +133,84 @@ public class GraphicsExperimentActivity extends Activity {
       buildGradients();
     }
 
+    private float dotGridGradient(int gradientIndex, float xGrid, float yGrid, float xQuery, float yQuery) {
+      float dx = xQuery - xGrid;
+      float dy = yQuery - yGrid;
+      float xGrad = mGradients[gradientIndex + 0];
+      float yGrad = mGradients[gradientIndex + 1];
+      return (xGrad * dx) + (yGrad * dy);
+    }
+
+    private static float lerp(float a0, float a1, float w) {
+      return (1.0f - w) * a0 + w * a1;
+    }
+
     /**
      * Evaluate noise value at a pixel, where integer portion of coordinate
      * represents grid cell index
      */
     public float noiseAt(float x, float y) {
-      float v = x + y;
-      v = (float) (v - Math.floor(v));
-      return v;
+
+      boolean db = (x >= 7 && x < 8 && y >= 3 && y < 4);
+      db = false;
+
+      int cellX = (int) x;
+      int cellY = (int) y;
+      float gridX = cellX;
+      float gridY = cellY;
+
+      if (cellX < 0 || cellY < 0 || cellX >= mGridSize.x || cellY >= mGridSize.y)
+        throw new IllegalArgumentException();
+
+      int floatsPerGridRow = (1 + mGridSize.x) * 2;
+      int gi = cellY * floatsPerGridRow + 2 * cellX;
+
+      float sx = x - gridX;
+      float sy = y - gridY;
+      if (sx < 0 || sx > 1 || sy < 0 || sy > 1) throw new IllegalArgumentException();
+
+      if (db) pr("Noise at " + d(x) + d(y) + " s=" + d(sx) + d(sy));
+
+      float d00 = dotGridGradient(gi + 0, gridX + 0, gridY, x, y);
+      float d10 = dotGridGradient(gi + 2, gridX + 1, gridY, x, y);
+      float aValue = lerp(d00, d10, sx);
+      if (db) pr(" d00=" + d(d00));
+      if (db) pr(" d10=" + d(d10));
+      if (db) pr("   va=" + d(aValue));
+
+      gridY += 1;
+      gi += floatsPerGridRow;
+      float d01 = dotGridGradient(gi + 0, gridX + 0, gridY, x, y);
+      float d11 = dotGridGradient(gi + 2, gridX + 1, gridY, x, y);
+      float bValue = lerp(d01, d11, sx);
+      if (db) pr(" d01=" + d(d01));
+      if (db) pr(" d11=" + d(d11));
+      if (db) pr("   vb=" + d(bValue));
+
+      float value = lerp(aValue, bValue, sy);
+      if (db) pr("    v=" + d(value));
+      value = (value + 1.0f) * .5f;
+      if (db) pr("   nv=" + d(value));
+      return value;
     }
 
     private void buildGradients() {
       Random r = new Random(1965);
+
+      // There is a grid point at each cell corner, thus
+      // we must add 1 to each dimension
       int numGradients = (mGridSize.x + 1) * (mGridSize.y + 1);
       mGradients = new float[2 * numGradients];
 
       int cursor = 0;
       for (int y = 0; y <= mGridSize.y; y++) {
         for (int x = 0; x <= mGridSize.x; x++) {
-          Point pt = MyMath.pointOnCircle(Point.ZERO, r.nextFloat() * MyMath.PI * 2, 1.0f);
-          mGradients[cursor + 0] = pt.x;
-          mGradients[cursor + 1] = pt.y;
+          float angle = r.nextFloat() * MyMath.PI * 2;
+          float cx = (float) Math.cos(angle);
+          float cy = (float) Math.sin(angle);
+          mGradients[cursor + 0] = cx;
+          mGradients[cursor + 1] = cy;
+          pr("gradient=" + cx + "," + cy);
           cursor += 2;
         }
       }
