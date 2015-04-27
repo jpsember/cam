@@ -84,11 +84,11 @@ public class GraphicsExperimentActivity extends Activity {
     private void constructImage() {
       constructCanvas();
 
-      int gridCellSize = 16;
+      int gridCellSize = 32;
       IPoint gridSize = new IPoint((int) (mBitmap.getWidth() / (float) gridCellSize),
           (int) (mBitmap.getHeight() / (float) gridCellSize));
       PerlinNoise noise = new PerlinNoise(gridSize);
-
+      noise.setTileSize(8);
       noise.buildGrid();
 
       int gridWidthPixels = gridSize.x * gridCellSize;
@@ -132,6 +132,10 @@ public class GraphicsExperimentActivity extends Activity {
 
     public PerlinNoise(IPoint gridSize) {
       mGridSize = gridSize;
+    }
+
+    public void setTileSize(int tileSize) {
+      mTileSize = tileSize;
     }
 
     public void buildGrid() {
@@ -228,10 +232,25 @@ public class GraphicsExperimentActivity extends Activity {
           cursor += 2;
         }
       }
+
+      if (mTileSize > 0) {
+        cursor = 0;
+        for (int y = 0; y <= mGridSize.y; y++) {
+          int ysrc = y % mTileSize;
+          for (int x = 0; x <= mGridSize.x; x++) {
+            int xsrc = x % mTileSize;
+            int source = (ysrc * (mGridSize.x + 1) + xsrc) * 2;
+            mGradients[cursor + 0] = mGradients[source + 0];
+            mGradients[cursor + 1] = mGradients[source + 1];
+            cursor += 2;
+          }
+        }
+      }
     }
 
     private IPoint mGridSize;
     private float[] mGradients;
     private Interpolation mInterpolation = Interpolation.CUBIC;
+    private int mTileSize;
   }
 }
