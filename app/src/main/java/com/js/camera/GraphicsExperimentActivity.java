@@ -4,9 +4,6 @@ import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffXfermode;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -14,7 +11,6 @@ import android.widget.ImageView;
 
 import com.js.basic.IPoint;
 import com.js.basic.MyMath;
-import com.js.basic.Point;
 
 import java.util.Random;
 
@@ -106,6 +102,9 @@ public class GraphicsExperimentActivity extends Activity {
           int color = Color.argb(0xff, gray, gray, gray);
           mBitmap.setPixel(px, py, color);
         }
+        if (py == gridHeightPixels / 2) {
+          noise.setCosineInterpolation(true);
+        }
       }
     }
 
@@ -133,6 +132,10 @@ public class GraphicsExperimentActivity extends Activity {
       buildGradients();
     }
 
+    public void setCosineInterpolation(boolean state) {
+      mCosineInterpolation = state;
+    }
+
     private float dotGridGradient(int gradientIndex, float xGrid, float yGrid, float xQuery, float yQuery) {
       float dx = xQuery - xGrid;
       float dy = yQuery - yGrid;
@@ -141,7 +144,10 @@ public class GraphicsExperimentActivity extends Activity {
       return (xGrad * dx) + (yGrad * dy);
     }
 
-    private static float lerp(float a0, float a1, float w) {
+    private float lerp(float a0, float a1, float w) {
+      if (mCosineInterpolation) {
+        w = (float) (1 - Math.cos(w * Math.PI)) / 2;
+      }
       return (1.0f - w) * a0 + w * a1;
     }
 
@@ -210,7 +216,6 @@ public class GraphicsExperimentActivity extends Activity {
           float cy = (float) Math.sin(angle);
           mGradients[cursor + 0] = cx;
           mGradients[cursor + 1] = cy;
-          pr("gradient=" + cx + "," + cy);
           cursor += 2;
         }
       }
@@ -218,5 +223,6 @@ public class GraphicsExperimentActivity extends Activity {
 
     private IPoint mGridSize;
     private float[] mGradients;
+    private boolean mCosineInterpolation;
   }
 }
