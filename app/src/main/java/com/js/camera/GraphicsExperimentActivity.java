@@ -13,6 +13,10 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 
 import com.js.basic.IPoint;
+import com.js.basic.MyMath;
+import com.js.basic.Point;
+
+import java.util.Random;
 
 import static com.js.android.AndroidTools.*;
 import static com.js.basic.Tools.*;
@@ -62,9 +66,6 @@ public class GraphicsExperimentActivity extends Activity {
 
   private class BuildImageTask extends TaskSequence {
 
-    public BuildImageTask() {
-    }
-
     @Override
     protected void execute(int stageNumber) {
       if (mState != ActivityState.Resumed) {
@@ -84,11 +85,28 @@ public class GraphicsExperimentActivity extends Activity {
 
     private void constructImage() {
       constructCanvas();
-      Paint paint = new Paint();
-      paint.setStyle(Paint.Style.FILL);
-      paint.setColor(Color.GREEN);
-      paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC));
-      mCanvas.drawRect(50, 50, 200, 200, paint);
+
+      int gridCellSize = 64;
+      IPoint gridSize = new IPoint((int) (mBitmap.getWidth() / (float) gridCellSize),
+          (int) (mBitmap.getHeight() / (float) gridCellSize));
+      PerlinNoise noise = new PerlinNoise(gridSize);
+
+      noise.buildGrid();
+
+      int gridWidthPixels = gridSize.x * gridCellSize;
+      int gridHeightPixels = gridSize.y * gridCellSize;
+
+      for (int py = 0; py < gridHeightPixels; py++) {
+        float gy = py / (float) gridCellSize;
+        for (int px = 0; px < gridWidthPixels; px++) {
+          float gx = px / (float) gridCellSize;
+
+          float value = noise.noiseAt(gx, gy);
+          int gray = (int) (value * 255);
+          int color = Color.argb(0xff, gray, gray, gray);
+          mBitmap.setPixel(px, py, color);
+        }
+      }
     }
 
     private void constructCanvas() {
@@ -104,4 +122,44 @@ public class GraphicsExperimentActivity extends Activity {
 
   private ActivityState mState = ActivityState.Paused;
   private ImageView mImageView;
+
+  private static class PerlinNoise {
+
+    public PerlinNoise(IPoint gridSize) {
+      mGridSize = gridSize;
+    }
+
+    public void buildGrid() {
+      buildGradients();
+    }
+
+    /**
+     * Evaluate noise value at a pixel, where integer portion of coordinate
+     * represents grid cell index
+     */
+    public float noiseAt(float x, float y) {
+      float v = x + y;
+      v = (float) (v - Math.floor(v));
+      return v;
+    }
+
+    private void buildGradients() {
+      Random r = new Random(1965);
+      int numGradients = (mGridSize.x + 1) * (mGridSize.y + 1);
+      mGradients = new float[2 * numGradients];
+
+      int cursor = 0;
+      for (int y = 0; y <= mGridSize.y; y++) {
+        for (int x = 0; x <= mGridSize.x; x++) {
+          Point pt = MyMath.pointOnCircle(Point.ZERO, r.nextFloat() * MyMath.PI * 2, 1.0f);
+          mGradients[cursor + 0] = pt.x;
+          mGradients[cursor + 1] = pt.y;
+          cursor += 2;
+        }
+      }
+    }
+
+    private IPoint mGridSize;
+    private float[] mGradients;
+  }
 }
