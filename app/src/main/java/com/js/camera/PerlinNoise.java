@@ -19,10 +19,6 @@ public class PerlinNoise {
     mGridSize = gridSize;
   }
 
-  public void setTileSize(int x, int y) {
-    mTileSize = new IPoint(x, y);
-  }
-
   public void setMaxGradients(int maxGradients) {
     mMaxGradients = maxGradients;
   }
@@ -43,10 +39,6 @@ public class PerlinNoise {
   }
 
   private int getGradientIndex(int xGrid, int yGrid) {
-    if (mTileSize != null) {
-      xGrid = myMod(xGrid, mTileSize.x);
-      yGrid = myMod(yGrid, mTileSize.y);
-    }
     int i = yGrid * (mGridSize.x + 1) + xGrid;
     // Pick a pseudorandom integer [0..max) using vertex as seed
     return myMod(hash(i), mGradients.length / 2);
@@ -143,7 +135,6 @@ public class PerlinNoise {
   private IPoint mGridSize;
   private float[] mGradients;
   private Interpolation mInterpolation = Interpolation.CUBIC;
-  private IPoint mTileSize;
   private int mMaxGradients;
   private int mSeed = 1;
 }
