@@ -1,11 +1,10 @@
 package com.js.camera;
 
-import com.js.basic.IPoint;
 import com.js.basic.MyMath;
 
 import java.util.Random;
 
-import static com.js.basic.Tools.myMod;
+import static com.js.basic.Tools.*;
 
 public class PerlinNoise {
 
@@ -15,12 +14,9 @@ public class PerlinNoise {
     QUINTIC,
   }
 
-  public PerlinNoise(IPoint gridSize) {
-    mGridSize = gridSize;
-  }
-
   public void setMaxGradients(int maxGradients) {
     if (gridBuilt()) throw new IllegalStateException();
+    if (maxGradients < 2) throw new IllegalArgumentException();
     mMaxGradients = maxGradients;
   }
 
@@ -41,9 +37,11 @@ public class PerlinNoise {
   }
 
   private int getGradientIndex(int xGrid, int yGrid) {
-    int i = yGrid * (mGridSize.x + 1) + xGrid;
-    // Pick a pseudorandom integer [0..max) using vertex as seed
-    return myMod(hash(i), mGradients.length / 2);
+    // Derive an integer key from vertex coordinates
+    final int PRIME = 101561;
+    int vertexKey = yGrid * PRIME + xGrid;
+    // Pick a pseudorandom integer [0..max) using key as seed
+    return myMod(hash(vertexKey), mGradients.length / 2);
   }
 
   private float dotGridGradient(float xGrid, float yGrid, float xQuery, float yQuery) {
@@ -102,18 +100,13 @@ public class PerlinNoise {
     float bValue = lerp(d01, d11, sx);
 
     float value = lerp(aValue, bValue, sy);
-    if (value < -1 || value >= 1) throw new IllegalArgumentException();
     return value;
   }
 
   private void buildGradients() {
     Random r = new Random(mSeed);
 
-    // There is a grid point at each cell corner, thus
-    // we must add 1 to each dimension
     int numGradients = mMaxGradients;
-    if (numGradients == 0)
-      numGradients = (mGridSize.x + 1) * (mGridSize.y + 1);
     mGradients = new float[2 * numGradients];
 
     int cursor = 0;
@@ -136,9 +129,8 @@ public class PerlinNoise {
     return mGradients != null;
   }
 
-  private IPoint mGridSize;
   private float[] mGradients;
   private Interpolation mInterpolation = Interpolation.CUBIC;
-  private int mMaxGradients;
+  private int mMaxGradients = 37;
   private int mSeed = 1;
 }

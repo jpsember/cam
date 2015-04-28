@@ -89,16 +89,16 @@ public class GraphicsExperimentActivity extends Activity {
       int gridWidthPixels = gridSize.x * gridCellSize;
       int gridHeightPixels = gridSize.y * gridCellSize;
 
-      final int numBands = 12;
+      final int numBands = 4;
       int prevBand = -1;
       for (int py = 0; py < gridHeightPixels; py++) {
         int band = Math.min(numBands - 1, py / (gridHeightPixels / numBands));
         if (band != prevBand) {
-          noise = new PerlinNoise(gridSize);
+          noise = new PerlinNoise();
           prevBand = band;
           noise.setSeed(2 + band);
-//          noise.setTileSize(3,3);
-          noise.setMaxGradients(2 + (band / 3) * (band / 4));
+          if (band != 0)
+            noise.setMaxGradients(1 + band * band);
           noise.buildGrid();
           continue;
         }
@@ -107,7 +107,7 @@ public class GraphicsExperimentActivity extends Activity {
         for (int px = 0; px < gridWidthPixels; px++) {
           float gx = px / (float) gridCellSize;
 
-          float value = noise.noiseAt(gx, gy);
+          float value = noise.noiseAt(gx-5.0f, gy-5.0f);
           value = (value + 1) / 2;
           int gray = (int) (value * 255.99f);
           int color = Color.argb(0xff, gray, gray, gray);
@@ -129,6 +129,5 @@ public class GraphicsExperimentActivity extends Activity {
 
   private ActivityState mState = ActivityState.Paused;
   private ImageView mImageView;
-
 
 }
