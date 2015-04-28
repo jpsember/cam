@@ -84,7 +84,7 @@ public class GraphicsExperimentActivity extends Activity {
       int gridCellSize = 20;
       IPoint gridSize = new IPoint((int) (mBitmap.getWidth() / (float) gridCellSize),
           (int) (mBitmap.getHeight() / (float) gridCellSize));
-      PerlinNoise noise = new PerlinNoise(gridSize);
+      PerlinNoise noise = null;
 
       int gridWidthPixels = gridSize.x * gridCellSize;
       int gridHeightPixels = gridSize.y * gridCellSize;
@@ -94,6 +94,7 @@ public class GraphicsExperimentActivity extends Activity {
       for (int py = 0; py < gridHeightPixels; py++) {
         int band = Math.min(numBands - 1, py / (gridHeightPixels / numBands));
         if (band != prevBand) {
+          noise = new PerlinNoise(gridSize);
           prevBand = band;
           noise.setSeed(2 + band);
 //          noise.setTileSize(3,3);

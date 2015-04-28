@@ -20,6 +20,7 @@ public class PerlinNoise {
   }
 
   public void setMaxGradients(int maxGradients) {
+    if (gridBuilt()) throw new IllegalStateException();
     mMaxGradients = maxGradients;
   }
 
@@ -31,6 +32,7 @@ public class PerlinNoise {
   }
 
   public void buildGrid() {
+    if (gridBuilt()) throw new IllegalStateException();
     buildGradients();
   }
 
@@ -84,9 +86,6 @@ public class PerlinNoise {
   public float noiseAt(float x, float y) {
     int cellX = (int) x;
     int cellY = (int) y;
-//      if (cellX < 0 || cellX >= mGridSize.x || cellY < 0 || cellY >= mGridSize.y) {
-//        throw new IllegalArgumentException();
-//      }
     float gridX = cellX;
     float gridY = cellY;
 
@@ -129,7 +128,12 @@ public class PerlinNoise {
   }
 
   public void setSeed(int seed) {
+    if (gridBuilt()) throw new IllegalStateException();
     mSeed = seed;
+  }
+
+  private boolean gridBuilt() {
+    return mGradients != null;
   }
 
   private IPoint mGridSize;
