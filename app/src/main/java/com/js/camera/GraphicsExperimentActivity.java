@@ -84,19 +84,27 @@ public class GraphicsExperimentActivity extends Activity {
     private void constructImage() {
       constructCanvas();
 
-      int gridCellSize = 32;
+      int gridCellSize = 20;
       IPoint gridSize = new IPoint((int) (mBitmap.getWidth() / (float) gridCellSize),
           (int) (mBitmap.getHeight() / (float) gridCellSize));
       PerlinNoise noise = new PerlinNoise(gridSize);
-//      noise.setTileSize(8);
-      noise.setSeed(1);
-      noise.setMaxGradients(3);
-      noise.buildGrid();
 
       int gridWidthPixels = gridSize.x * gridCellSize;
       int gridHeightPixels = gridSize.y * gridCellSize;
 
+      final int numBands = 12;
+      int prevBand = -1;
       for (int py = 0; py < gridHeightPixels; py++) {
+        int band = Math.min(numBands - 1, py / (gridHeightPixels / numBands));
+        if (band != prevBand) {
+          prevBand = band;
+          noise.setSeed(2 + band);
+//          noise.setTileSize(3,3);
+          noise.setMaxGradients(2 + (band / 3) * (band / 4));
+          noise.buildGrid();
+          continue;
+        }
+
         float gy = py / (float) gridCellSize;
         for (int px = 0; px < gridWidthPixels; px++) {
           float gx = px / (float) gridCellSize;
@@ -136,21 +144,15 @@ public class GraphicsExperimentActivity extends Activity {
       mGridSize = gridSize;
     }
 
-    public void setTileSize(int tileSize) {
-      mTileSize = tileSize;
+    public void setTileSize(int x, int y) {
+      mTileSize = new IPoint(x, y);
     }
 
     public void setMaxGradients(int maxGradients) {
       mMaxGradients = maxGradients;
     }
 
-    private static Random sHashRandom = new Random(1);
-
     private static int hash(int x) {
-      if (true) {
-        sHashRandom.setSeed(1 + x);
-        return sHashRandom.nextInt();
-      }
       x = ((x >>> 16) ^ x) * 0x45d9f3b;
       x = ((x >>> 16) ^ x) * 0x45d9f3b;
       x = ((x >>> 16) ^ x);
@@ -166,6 +168,10 @@ public class GraphicsExperimentActivity extends Activity {
     }
 
     private int getGradientIndex(int xGrid, int yGrid) {
+      if (mTileSize != null) {
+        xGrid = xGrid % mTileSize.x;
+        yGrid = yGrid % mTileSize.y;
+      }
       int i = (yGrid * (mGridSize.x + 1) + xGrid);
       if (mMaxGradients == 0)
         return i;
@@ -256,22 +262,6 @@ public class GraphicsExperimentActivity extends Activity {
         mGradients[cursor + 1] = cy;
         cursor += 2;
       }
-
-      if (mTileSize > 0) {
-        if (mMaxGradients != 0)
-          throw new UnsupportedOperationException("tiling not supported with reduced gradients");
-        cursor = 0;
-        for (int y = 0; y <= mGridSize.y; y++) {
-          int ysrc = y % mTileSize;
-          for (int x = 0; x <= mGridSize.x; x++) {
-            int xsrc = x % mTileSize;
-            int source = (ysrc * (mGridSize.x + 1) + xsrc) * 2;
-            mGradients[cursor + 0] = mGradients[source + 0];
-            mGradients[cursor + 1] = mGradients[source + 1];
-            cursor += 2;
-          }
-        }
-      }
     }
 
     public void setSeed(int seed) {
@@ -281,7 +271,7 @@ public class GraphicsExperimentActivity extends Activity {
     private IPoint mGridSize;
     private float[] mGradients;
     private Interpolation mInterpolation = Interpolation.CUBIC;
-    private int mTileSize;
+    private IPoint mTileSize;
     private int mMaxGradients;
     private int mSeed = 1;
   }
