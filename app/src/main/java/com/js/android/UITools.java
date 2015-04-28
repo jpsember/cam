@@ -282,6 +282,10 @@ public final class UITools {
     return sConfiguration;
   }
 
+  public static boolean isPortrait() {
+    return configuration().orientation == Configuration.ORIENTATION_PORTRAIT;
+  }
+
   public static int dpToPixels(float densityPixels) {
     return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, densityPixels, displayMetrics());
   }

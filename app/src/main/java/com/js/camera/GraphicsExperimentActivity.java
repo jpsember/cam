@@ -1,7 +1,6 @@
 package com.js.camera;
 
 import android.app.Activity;
-import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -12,6 +11,7 @@ import android.widget.ImageView;
 
 import com.js.android.UITools;
 import com.js.basic.IPoint;
+import com.js.basic.MyMath;
 
 import static com.js.android.AndroidTools.*;
 import static com.js.basic.Tools.*;
@@ -81,7 +81,7 @@ public class GraphicsExperimentActivity extends Activity {
     private void constructImage() {
       constructCanvas();
 
-      int gridCellSize = 20;
+      int gridCellSize = 16;
       IPoint gridSize = new IPoint((int) (mBitmap.getWidth() / (float) gridCellSize),
           (int) (mBitmap.getHeight() / (float) gridCellSize));
       PerlinNoise noise = null;
@@ -96,9 +96,6 @@ public class GraphicsExperimentActivity extends Activity {
         if (band != prevBand) {
           noise = new PerlinNoise();
           prevBand = band;
-          noise.setSeed(2 + band);
-          if (band != 0)
-            noise.setMaxGradients(1 + band * band);
           noise.buildGrid();
           continue;
         }
@@ -106,9 +103,14 @@ public class GraphicsExperimentActivity extends Activity {
         float gy = py / (float) gridCellSize;
         for (int px = 0; px < gridWidthPixels; px++) {
           float gx = px / (float) gridCellSize;
-
-          float value = noise.noiseAt(gx-5.0f, gy-5.0f);
-          value = (value + 1) / 2;
+          float value;
+          value = noise.noiseAt(gx, gy);
+          if (band != 0) {
+            value = noise.noiseAt(gx, gy);
+            float value2 = noise.noiseAt(gx * (1 + band), gy * (1 + band)) * .5f;
+            value += value2;
+          }
+          value = MyMath.clamp((value + 1) / 2, 0, 1.0f);
           int gray = (int) (value * 255.99f);
           int color = Color.argb(0xff, gray, gray, gray);
           mBitmap.setPixel(px, py, color);
@@ -117,7 +119,7 @@ public class GraphicsExperimentActivity extends Activity {
     }
 
     private void constructCanvas() {
-      IPoint targetSize = PhotoInfo.getLogicalMaximumSize(UITools.configuration().orientation == Configuration.ORIENTATION_PORTRAIT);
+      IPoint targetSize = PhotoInfo.getLogicalMaximumSize(UITools.isPortrait());
       mBitmap = Bitmap.createBitmap(targetSize.x, targetSize.y, Bitmap.Config.ARGB_8888);
       mCanvas = new Canvas();
       mCanvas.setBitmap(mBitmap);
