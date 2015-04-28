@@ -53,7 +53,7 @@ public class PerlinNoise {
     return (xGrad * dx) + (yGrad * dy);
   }
 
-  private float lerp(float a0, float a1, float w) {
+  private float interpolate(float a0, float a1, float w) {
     switch (mInterpolation) {
       case LINEAR:
         break;
@@ -82,8 +82,9 @@ public class PerlinNoise {
    * @return value within [-1..1)
    */
   public float noiseAt(float x, float y) {
-    int cellX = (int) x;
-    int cellY = (int) y;
+    int cellX = (int) Math.floor(x);
+    int cellY = (int) Math.floor(y);
+
     float gridX = cellX;
     float gridY = cellY;
 
@@ -92,14 +93,14 @@ public class PerlinNoise {
 
     float d00 = dotGridGradient(gridX + 0, gridY, x, y);
     float d10 = dotGridGradient(gridX + 1, gridY, x, y);
-    float aValue = lerp(d00, d10, sx);
+    float aValue = interpolate(d00, d10, sx);
 
     gridY += 1;
     float d01 = dotGridGradient(gridX + 0, gridY, x, y);
     float d11 = dotGridGradient(gridX + 1, gridY, x, y);
-    float bValue = lerp(d01, d11, sx);
+    float bValue = interpolate(d01, d11, sx);
 
-    float value = lerp(aValue, bValue, sy);
+    float value = interpolate(aValue, bValue, sy);
     return value;
   }
 
