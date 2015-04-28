@@ -89,6 +89,8 @@ public class GraphicsExperimentActivity extends Activity {
           (int) (mBitmap.getHeight() / (float) gridCellSize));
       PerlinNoise noise = new PerlinNoise(gridSize);
 //      noise.setTileSize(8);
+      noise.setSeed(1);
+      noise.setMaxGradients(3);
       noise.buildGrid();
 
       int gridWidthPixels = gridSize.x * gridCellSize;
@@ -142,6 +144,19 @@ public class GraphicsExperimentActivity extends Activity {
       mMaxGradients = maxGradients;
     }
 
+    private static Random sHashRandom = new Random(1);
+
+    private static int hash(int x) {
+      if (true) {
+        sHashRandom.setSeed(1 + x);
+        return sHashRandom.nextInt();
+      }
+      x = ((x >>> 16) ^ x) * 0x45d9f3b;
+      x = ((x >>> 16) ^ x) * 0x45d9f3b;
+      x = ((x >>> 16) ^ x);
+      return x;
+    }
+
     public void buildGrid() {
       buildGradients();
     }
@@ -151,11 +166,15 @@ public class GraphicsExperimentActivity extends Activity {
     }
 
     private int getGradientIndex(int xGrid, int yGrid) {
-      return (yGrid * (mGridSize.x + 1) + xGrid) * 2;
+      int i = (yGrid * (mGridSize.x + 1) + xGrid);
+      if (mMaxGradients == 0)
+        return i;
+      // Pick a pseudorandom integer [0..max) using vertex as seed
+      return myMod(hash(i), mMaxGradients);
     }
 
     private float dotGridGradient(float xGrid, float yGrid, float xQuery, float yQuery) {
-      int gradientIndex = getGradientIndex((int) xGrid, (int) yGrid);
+      int gradientIndex = 2 * getGradientIndex((int) xGrid, (int) yGrid);
       float dx = xQuery - xGrid;
       float dy = yQuery - yGrid;
       float xGrad = mGradients[gradientIndex + 0];
@@ -219,7 +238,7 @@ public class GraphicsExperimentActivity extends Activity {
     }
 
     private void buildGradients() {
-      Random r = new Random(1965);
+      Random r = new Random(mSeed);
 
       // There is a grid point at each cell corner, thus
       // we must add 1 to each dimension
@@ -229,15 +248,13 @@ public class GraphicsExperimentActivity extends Activity {
       mGradients = new float[2 * numGradients];
 
       int cursor = 0;
-      for (int y = 0; y <= mGridSize.y; y++) {
-        for (int x = 0; x <= mGridSize.x; x++) {
-          float angle = r.nextFloat() * MyMath.PI * 2;
-          float cx = (float) Math.cos(angle);
-          float cy = (float) Math.sin(angle);
-          mGradients[cursor + 0] = cx;
-          mGradients[cursor + 1] = cy;
-          cursor += 2;
-        }
+      for (int g = 0; g < numGradients; g++) {
+        float angle = r.nextFloat() * MyMath.PI * 2;
+        float cx = (float) Math.cos(angle);
+        float cy = (float) Math.sin(angle);
+        mGradients[cursor + 0] = cx;
+        mGradients[cursor + 1] = cy;
+        cursor += 2;
       }
 
       if (mTileSize > 0) {
@@ -257,11 +274,16 @@ public class GraphicsExperimentActivity extends Activity {
       }
     }
 
+    public void setSeed(int seed) {
+      mSeed = seed;
+    }
 
     private IPoint mGridSize;
     private float[] mGradients;
     private Interpolation mInterpolation = Interpolation.CUBIC;
     private int mTileSize;
     private int mMaxGradients;
+    private int mSeed = 1;
   }
+
 }
