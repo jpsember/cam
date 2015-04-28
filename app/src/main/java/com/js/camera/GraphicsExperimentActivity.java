@@ -81,7 +81,7 @@ public class GraphicsExperimentActivity extends Activity {
     private void constructImage() {
       constructCanvas();
 
-      int gridCellSize = 16;
+      final int gridCellSize = 16;
       IPoint gridSize = new IPoint((int) (mBitmap.getWidth() / (float) gridCellSize),
           (int) (mBitmap.getHeight() / (float) gridCellSize));
       PerlinNoise noise = null;
@@ -106,9 +106,11 @@ public class GraphicsExperimentActivity extends Activity {
           float value;
           value = noise.noiseAt(gx, gy);
           if (band != 0) {
-            value = noise.noiseAt(gx, gy);
-            float value2 = noise.noiseAt(gx * (1 + band), gy * (1 + band)) * .5f;
-            value += value2;
+            float power = 2;
+            for (int iter = 0; iter < band; iter++) {
+              value += noise.noiseAt(gx * power, gy * power) / power;
+              power *= 2;
+            }
           }
           value = MyMath.clamp((value + 1) / 2, 0, 1.0f);
           int gray = (int) (value * 255.99f);
