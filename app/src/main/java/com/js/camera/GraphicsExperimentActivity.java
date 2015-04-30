@@ -1,6 +1,8 @@
 package com.js.camera;
 
 import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -21,6 +23,11 @@ public class GraphicsExperimentActivity extends Activity {
   private enum ActivityState {
     Paused,
     Resumed,
+  }
+
+  public static Intent buildIntent(Context context) {
+    Intent intent = new Intent(context, GraphicsExperimentActivity.class);
+    return intent;
   }
 
   @Override

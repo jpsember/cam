@@ -5,6 +5,12 @@
         android:icon="@android:drawable/ic_menu_camera"
         android:title="Camera"
         android:showAsAction="ifRoom"/>
+    <!-- Experiments -->
+    <item
+        android:id="@+id/action_experiments"
+        android:icon="@android:drawable/ic_menu_agenda"
+        android:title="Experiment"
+        android:showAsAction="ifRoom"/>
     <!-- Settings, should always be in the overflow -->
     <item
         android:id="@+id/action_settings"

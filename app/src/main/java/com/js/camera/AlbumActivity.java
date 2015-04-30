@@ -96,6 +96,10 @@ public class AlbumActivity extends Activity implements Observer {
         startActivityForResult(CameraActivity.buildIntent(this), 0);
       }
       break;
+      case R.id.action_experiments: {
+        startActivityForResult(GraphicsExperimentActivity.buildIntent(this), 0);
+      }
+      break;
       default:
         return super.onOptionsItemSelected(item);
     }
