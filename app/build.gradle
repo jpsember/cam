@@ -21,6 +21,7 @@ android {
 dependencies {
     compile "com.android.support:support-v4:18.0.+"
     compile 'commons-io:commons-io:2.2'
+    compile 'com.squareup.picasso:picasso:2.5.2'
     compile 'com.google.guava:guava:r05'
 }
 
