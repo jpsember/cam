@@ -676,6 +676,11 @@ public class PhotoFile extends Observable {
     return new File(mRootDirectory, prefix + photoId + ext);
   }
 
+  public File tempGetPhotoPath(int photoId) {
+    String ext = ".jpg";
+    return new File(mRootDirectory, photoId + ext);
+  }
+
   private File getPhotoInfoPath(int photoId, boolean backup) {
     assertBgndThread();
     String prefix = backup ? ORIGINAL_COPY_PREFIX : "";
