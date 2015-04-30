@@ -11,13 +11,13 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
 
 import com.js.android.UITools;
-import com.js.basic.IPoint;
 import com.js.camera.camera.R;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.Transformation;
@@ -111,7 +111,6 @@ public class AlbumActivity extends Activity implements Observer {
     mGridView = v;
     mThumbSize = UITools.dpToPixels(UITools.smallScreenSize() ? 120 : 200);
     int spacing = UITools.dpToPixels(5);
-    v.setColumnWidth(mThumbSize + spacing);
     v.setNumColumns(GridView.AUTO_FIT);
     v.setVerticalSpacing(spacing);
     v.setHorizontalSpacing(spacing);
@@ -186,6 +185,7 @@ public class AlbumActivity extends Activity implements Observer {
         holder = new AdapterImageViewHolder();
         holder.imageView = imageView;
         imageView.setTag(holder);
+        imageView.setLayoutParams(new AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, mThumbSize));
       } else {
         imageView = (ImageView) convertView;
         holder = (AdapterImageViewHolder) imageView.getTag();
