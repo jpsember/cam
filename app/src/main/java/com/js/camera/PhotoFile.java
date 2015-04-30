@@ -3,11 +3,16 @@ package com.js.camera;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.os.Environment;
+import android.widget.ImageView;
 
+import com.js.android.UITools;
 import com.js.basic.Files;
 import com.js.basic.IPoint;
 import com.js.basic.JSONTools;
+import com.squareup.picasso.Picasso;
+import com.squareup.picasso.Transformation;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -496,82 +501,105 @@ public class PhotoFile extends Observable {
     t.start();
   }
 
-  private class GetAgedPhotoTask extends TaskSequence {
+  private Bitmap readBitmapFromFile(PhotoInfo mPhotoInfo) {
+    File photoPath = getPhotoBitmapPath(mPhotoInfo.getId(), false);
+    // Cut down on logging noise by omitting this:
+    //trace("Reading " + mPhotoInfo + " bitmap from " + photoPath.getName());
+    Bitmap bitmap = BitmapFactory.decodeFile(photoPath.getPath());
+    return bitmap;
+  }
 
-    public GetAgedPhotoTask(Context context, PhotoInfo photoInfo) {
-      photoInfo.assertFrozen();
-      mPhotoInfo = photoInfo;
+  private void agePhoto(PhotoInfo mPhotoInfo) {
+    trace(".........aging " + mPhotoInfo + " to target " + mPhotoInfo.getTargetAgeState());
+    PhotoInfo agedPhoto = mutableCopyOf(mPhotoInfo);
+    agedPhoto.setTargetAgeState(agedPhoto.getTargetAgeState());
+    agedPhoto.freeze();
+
+    // Read current bitmap as JPEG
+    File photoPath = getPhotoBitmapPath(mPhotoInfo.getId(), false);
+    try {
+      byte[] jpeg = FileUtils.readFileToByteArray(photoPath);
+      PhotoAger ager = new PhotoAger(agedPhoto, jpeg);
+      jpeg = ager.getAgedJPEG();
+      FileUtils.writeByteArrayToFile(photoPath, jpeg);
+      agedPhoto = ager.getAgedInfo();
+      mPhotoInfo = agedPhoto;
+      writePhotoInfo(mPhotoInfo);
+      // Replace old version within set
+      mPhotoSet.remove(mPhotoInfo);
+      mPhotoSet.add(mPhotoInfo);
+      trace("writing aged version: " + mPhotoInfo);
+    } catch (IOException e) {
+      // TODO: figure out how to handle this gracefully
+      die(e);
+    }
+  }
+
+  public void loadBitmapIntoView(Context context, PhotoInfo photo, Integer thumbSize, ImageView target) {
+    Picasso.with(context).load(
+        getPhotoBitmapPath(photo.getId(), false)).transform(
+        new OurTransformation(context, photo, thumbSize != null, thumbSize != null ? thumbSize : -1))
+        .into(target);
+  }
+
+  private class OurTransformation implements Transformation {
+
+    public OurTransformation(Context context, PhotoInfo photo, boolean thumbnail, int thumbSize) {
       mContext = context;
+      mPhotoInfo = photo;
+      mThumbnail = thumbnail;
+      mThumbSize = thumbSize;
     }
 
     @Override
-    protected void execute(int stageNumber) {
-      switch (stageNumber) {
-        case 0: {
-          // If target age is greater than current, age the photo
-          if (mPhotoInfo.getTargetAgeState() > mPhotoInfo.getCurrentAgeState()) {
-            agePhoto();
-          }
-          Bitmap bitmap = readBitmapFromFile();
-          PhotoManipulator m = new PhotoManipulator(mContext, PhotoFile.this, mPhotoInfo, bitmap);
-          mAgedPhoto = m.getManipulatedBitmap();
-          bitmap.recycle();
-        }
-        break;
-        case 1:
-          notifyEventObservers(Event.BitmapConstructed, mPhotoInfo, mAgedPhoto);
-          finish();
-          break;
+    public Bitmap transform(Bitmap bitmap) {
+      trace("transforming " + mPhotoInfo + "; thumbnail " + mThumbnail);
+      // If target age is greater than current, age the photo and reload
+      if (mPhotoInfo.getTargetAgeState() > mPhotoInfo.getCurrentAgeState()) {
+        warning("race condition: if simultaneous aging is occurring");
+        unimp("age photo before attempting to load from file the first time");
+        agePhoto(mPhotoInfo);
+        bitmap.recycle();
+        bitmap = readBitmapFromFile(mPhotoInfo);
       }
-    }
+      PhotoManipulator m = new PhotoManipulator(mContext, PhotoFile.this, mPhotoInfo, bitmap);
+      Bitmap bitmap2 = m.getManipulatedBitmap();
+      bitmap.recycle();
+      bitmap = bitmap2;
 
-    private Bitmap readBitmapFromFile() {
-      File photoPath = getPhotoBitmapPath(mPhotoInfo.getId(), false);
-      // Cut down on logging noise by omitting this:
-      //trace("Reading " + mPhotoInfo + " bitmap from " + photoPath.getName());
-      Bitmap bitmap = BitmapFactory.decodeFile(photoPath.getPath());
+      if (mThumbnail) {
+        int origWidth = (int) (bitmap.getWidth() * .8f);
+        int origHeight = (int) (bitmap.getHeight() * .8f);
+        int origSize = Math.min(origWidth, origHeight);
+        float scaleFactor = mThumbSize / (float) origSize;
+        Matrix matrix = new Matrix();
+
+        sleepFor(300);
+
+        matrix.postScale(scaleFactor, scaleFactor);
+        Bitmap thumbnailBitmap = Bitmap.createBitmap(bitmap,
+            (bitmap.getWidth() - origSize) / 2, (bitmap.getHeight() - origSize) / 2,
+            origSize, origSize, matrix, true);
+        if (bitmap != thumbnailBitmap) {
+          bitmap.recycle();
+          UITools.tagBitmap(thumbnailBitmap);
+          bitmap = thumbnailBitmap;
+        }
+      }
       return bitmap;
     }
 
-    private void agePhoto() {
-      trace(".........aging " + mPhotoInfo + " to target " + mPhotoInfo.getTargetAgeState());
-      PhotoInfo agedPhoto = mutableCopyOf(mPhotoInfo);
-      agedPhoto.setTargetAgeState(agedPhoto.getTargetAgeState());
-      agedPhoto.freeze();
-
-      // Read current bitmap as JPEG
-      File photoPath = getPhotoBitmapPath(mPhotoInfo.getId(), false);
-      try {
-        byte[] jpeg = FileUtils.readFileToByteArray(photoPath);
-        PhotoAger ager = new PhotoAger(agedPhoto, jpeg);
-        jpeg = ager.getAgedJPEG();
-        FileUtils.writeByteArrayToFile(photoPath, jpeg);
-        agedPhoto = ager.getAgedInfo();
-        mPhotoInfo = agedPhoto;
-        writePhotoInfo(mPhotoInfo);
-        // Replace old version within set
-        mPhotoSet.remove(mPhotoInfo);
-        mPhotoSet.add(mPhotoInfo);
-        trace("writing aged version: " + mPhotoInfo);
-      } catch (IOException e) {
-        // TODO: figure out how to handle this gracefully
-        die(e);
-      }
+    @Override
+    public String key() {
+      return mThumbnail ? "thumb" : "normal";
     }
 
+    private final PhotoInfo mPhotoInfo;
+    private final boolean mThumbnail;
+    private final int mThumbSize;
     private final Context mContext;
-    private Bitmap mAgedPhoto;
-    private PhotoInfo mPhotoInfo;
   }
 
-  /**
-   * Construct a suitably aged bitmap for a photo
-   */
-  public void getBitmap(Context context, PhotoInfo photoInfo) {
-    assertOpen();
-    TaskSequence t = new GetAgedPhotoTask(context, photoInfo);
-    t.start();
-  }
 
   private void trace(Object msg) {
     if (mTrace) {
@@ -668,19 +696,12 @@ public class PhotoFile extends Observable {
   }
 
   private File getPhotoBitmapPath(int photoId, boolean backup) {
-    assertBgndThread();
     String prefix = backup ? ORIGINAL_COPY_PREFIX : "";
     String ext = ".jpg";
     return new File(mRootDirectory, prefix + photoId + ext);
   }
 
-  public File tempGetPhotoPath(int photoId) {
-    String ext = ".jpg";
-    return new File(mRootDirectory, photoId + ext);
-  }
-
   private File getPhotoInfoPath(int photoId, boolean backup) {
-    assertBgndThread();
     String prefix = backup ? ORIGINAL_COPY_PREFIX : "";
     String ext = backup ? ".orig_json" : ".json";
     return new File(mRootDirectory, prefix + photoId + ext);

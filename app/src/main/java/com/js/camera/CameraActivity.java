@@ -169,7 +169,7 @@ public class CameraActivity extends Activity implements OnClickListener, Observe
       case PhotoCreated:
         // Request a load of the photo's bitmap to display in the image view
         mBitmapLoadingPhotoInfo = (PhotoInfo) args[1];
-        mPhotoFile.getBitmap(this, mBitmapLoadingPhotoInfo);
+        mPhotoFile.loadBitmapIntoView(this, mBitmapLoadingPhotoInfo,null,mImageView);
         break;
     }
   }

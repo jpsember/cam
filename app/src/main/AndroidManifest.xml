@@ -43,12 +43,6 @@
             android:exported="true">
         </activity>
 
-        <activity
-            android:label="Picasso"
-            android:name="com.js.camera.PicassoDemoActivity"
-            android:exported="true">
-        </activity>
-
     </application>
 
 </manifest>

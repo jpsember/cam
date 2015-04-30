@@ -2,8 +2,6 @@ package com.js.camera;
 
 import android.app.Activity;
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.Matrix;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.Menu;
@@ -19,8 +17,6 @@ import android.widget.ImageView;
 
 import com.js.android.UITools;
 import com.js.camera.camera.R;
-import com.squareup.picasso.Picasso;
-import com.squareup.picasso.Transformation;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -192,11 +188,8 @@ public class AlbumActivity extends Activity implements Observer {
         holder.imageView = imageView;
         trace("getView position " + position + " => existing " + nameOf(imageView));
       }
-      final PhotoInfo photo = getPhoto(position);
-
-      Picasso.with(AlbumActivity.this).load(mPhotoFile.tempGetPhotoPath(photo.getId())).transform(
-          getThumbnailTransform()).into(
-          holder.imageView);
+      PhotoInfo photo = getPhoto(position);
+      mPhotoFile.loadBitmapIntoView(AlbumActivity.this, photo, mThumbSize, holder.imageView);
       return imageView;
     }
   }
@@ -210,6 +203,7 @@ public class AlbumActivity extends Activity implements Observer {
     ImageView imageView;
   }
 
+  @SuppressWarnings("UnusedDeclaration")
   public void setTrace(boolean state) {
     mTrace = state;
     if (state)
@@ -226,38 +220,6 @@ public class AlbumActivity extends Activity implements Observer {
     }
   }
 
-  private Transformation getThumbnailTransform() {
-    if (mThumbnailTransform == null)
-      mThumbnailTransform = new Transformation() {
-        @Override
-        public Bitmap transform(Bitmap bitmap) {
-          int origWidth = (int) (bitmap.getWidth() * .8f);
-          int origHeight = (int) (bitmap.getHeight() * .8f);
-          int origSize = Math.min(origWidth, origHeight);
-          float scaleFactor = mThumbSize / (float) origSize;
-          Matrix m = new Matrix();
-
-          pr("transforming bitmap for thumbnail..., " + nameOf(bitmap));
-          sleepFor(300);
-
-          m.postScale(scaleFactor, scaleFactor);
-          Bitmap thumbnailBitmap = Bitmap.createBitmap(bitmap,
-              (bitmap.getWidth() - origSize) / 2, (bitmap.getHeight() - origSize) / 2,
-              origSize, origSize, m, true);
-          bitmap.recycle();
-          UITools.tagBitmap(thumbnailBitmap);
-          return thumbnailBitmap;
-        }
-
-        @Override
-        public String key() {
-          return "thumb";
-        }
-      };
-    return mThumbnailTransform;
-  }
-
-  private Transformation mThumbnailTransform;
   private boolean mResumed;
   private int mThumbSize;
   private boolean mTrace;

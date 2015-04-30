@@ -234,8 +234,11 @@ public class ViewPhotoActivity extends Activity implements Observer {
         warning("no photo id " + photoId + " found");
         return;
       }
+
       // Attempt to load bitmap for this photo
-      mPhotoFile.getBitmap(ViewPhotoActivity.this, info);
+      unimp("use same pattern as in Album to determine target view");
+      mPhotoFile.loadBitmapIntoView(ViewPhotoActivity.this, info, null,
+          mViewToPhotoIdBiMap.inverse().get(info.getId()));
     }
 
     public void bitmapArrived(PhotoInfo photoInfo, Bitmap bitmap) {
