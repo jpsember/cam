@@ -109,10 +109,9 @@ public class AlbumActivity extends Activity implements Observer {
   private View buildContentView() {
     GridView v = new GridView(this);
     mGridView = v;
+    mThumbSize = UITools.dpToPixels(UITools.smallScreenSize() ? 120 : 200);
     int spacing = UITools.dpToPixels(5);
-    int thumbSize = UITools.dpToPixels(UITools.smallScreenSize() ? 120 : 200);
-    mThumbSize = new IPoint(thumbSize - spacing, thumbSize - spacing);
-    v.setColumnWidth(mThumbSize.x + spacing);
+    v.setColumnWidth(mThumbSize + spacing);
     v.setNumColumns(GridView.AUTO_FIT);
     v.setVerticalSpacing(spacing);
     v.setHorizontalSpacing(spacing);
@@ -235,7 +234,7 @@ public class AlbumActivity extends Activity implements Observer {
           int origWidth = (int) (bitmap.getWidth() * .8f);
           int origHeight = (int) (bitmap.getHeight() * .8f);
           int origSize = Math.min(origWidth, origHeight);
-          float scaleFactor = mThumbSize.x / (float) origSize;
+          float scaleFactor = mThumbSize / (float) origSize;
           Matrix m = new Matrix();
 
           pr("transforming bitmap for thumbnail..., " + nameOf(bitmap));
@@ -260,7 +259,7 @@ public class AlbumActivity extends Activity implements Observer {
 
   private Transformation mThumbnailTransform;
   private boolean mResumed;
-  private IPoint mThumbSize;
+  private int mThumbSize;
   private boolean mTrace;
   private PhotoFile mPhotoFile;
   private GridView mGridView;
