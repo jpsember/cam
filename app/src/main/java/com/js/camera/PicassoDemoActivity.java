@@ -23,8 +23,6 @@ import java.util.Observer;
 import static com.js.android.AndroidTools.*;
 import static com.js.basic.Tools.*;
 
-import static com.squareup.picasso.Callback.EmptyCallback;
-
 public class PicassoDemoActivity extends Activity implements Observer {
 
   @Override
@@ -89,14 +87,7 @@ public class PicassoDemoActivity extends Activity implements Observer {
     File file = mPhotoFile.tempGetPhotoPath(photo.getId());
     buildTransforms();
     Picasso.with(this).load(file).transform(parity ? mTrans2 : mTrans1).into(
-        parity ? mImageView2 : mImageView1,
-        new EmptyCallback() {
-          @Override
-          public void onSuccess() {
-            // Index 0 is the image view.
-//            animator.setDisplayedChild(0);
-          }
-        });
+        parity ? mImageView2 : mImageView1);
   }
 
   @Override
@@ -124,11 +115,7 @@ public class PicassoDemoActivity extends Activity implements Observer {
       public Bitmap transform(Bitmap bitmap) {
         Bitmap bitmap2 = bitmap.copy(Bitmap.Config.ARGB_8888, true);
         bitmap.recycle();
-        Canvas canvas = new Canvas(bitmap2);
-        Paint p = new Paint();
-        p.setStyle(Paint.Style.FILL);
-        p.setColor(Color.GREEN);
-        canvas.drawRect(50, 50, 200, 200, p);
+        UITools.tagBitmap(bitmap2);
         return bitmap2;
       }
 
@@ -140,15 +127,10 @@ public class PicassoDemoActivity extends Activity implements Observer {
     mTrans2 = new Transformation() {
       @Override
       public Bitmap transform(Bitmap bitmap) {
-        pr("transform, thread " + nameOf(Thread.currentThread()));
-        sleepFor(this == mTrans2 ? 250 : 10);
+        sleepFor(1250);
         Bitmap bitmap2 = bitmap.copy(Bitmap.Config.ARGB_8888, true);
         bitmap.recycle();
-        Canvas canvas = new Canvas(bitmap2);
-        Paint p = new Paint();
-        p.setStyle(Paint.Style.FILL);
-        p.setColor(Color.RED);
-        canvas.drawRect(50, 50, 200, 200, p);
+        UITools.tagBitmap(bitmap2);
         return bitmap2;
       }
 

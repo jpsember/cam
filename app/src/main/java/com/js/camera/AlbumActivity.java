@@ -19,13 +19,13 @@ import android.widget.ImageView;
 import com.js.android.UITools;
 import com.js.basic.IPoint;
 import com.js.camera.camera.R;
+import com.squareup.picasso.Picasso;
+import com.squareup.picasso.Transformation;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
-import java.util.Set;
 
 import static com.js.basic.Tools.*;
 import static com.js.android.AndroidTools.*;
@@ -140,98 +140,7 @@ public class AlbumActivity extends Activity implements Observer {
       case StateChanged:
         rebuildAlbumIfPhotosAvailable();
         break;
-      case BitmapConstructed: {
-        PhotoInfo photo = (PhotoInfo) params[1];
-        Bitmap bitmap = (Bitmap) params[2];
-        trace("BitmapConstructed for " + photo + ": " + bitmap);
-        // If we're not constructing a thumbnail, ignore
-        if (!mThumbnailRequestedSet.contains(photo.getId())) {
-          trace("not requesting thumbnail");
-          break;
-        }
-        if (mPhotoFile.getBitmapFromMemCache(memCacheKeyFor(photo)) != null) {
-          throw new IllegalStateException("thumbnail already exists");
-        }
-        // Start a new TaskSequence to build and deal with thumbnail
-        new BuildThumbnailTask(photo, bitmap).start();
-      }
-      break;
     }
-  }
-
-  private class BuildThumbnailTask extends TaskSequence {
-
-    public BuildThumbnailTask(PhotoInfo photo, Bitmap originalBitmap) {
-      mPhoto = photo;
-      mOriginalBitmap = originalBitmap;
-    }
-
-    @Override
-    protected void execute(int stageNumber) {
-      if (!mResumed) {
-        abort();
-        return;
-      }
-      switch (stageNumber) {
-        case 0:
-          constructThumbnail();
-          break;
-        case 1:
-          receivedThumbnail();
-          finish();
-          break;
-      }
-    }
-
-    private void constructThumbnail() {
-      Bitmap bitmap = mOriginalBitmap;
-      assertBgndThread();
-      int origWidth = (int) (bitmap.getWidth() * .8f);
-      int origHeight = (int) (bitmap.getHeight() * .8f);
-      int origSize = Math.min(origWidth, origHeight);
-      float scaleFactor = mThumbSize.x / (float) origSize;
-      Matrix m = new Matrix();
-
-      m.postScale(scaleFactor, scaleFactor);
-      mThumbnailBitmap = Bitmap.createBitmap(bitmap,
-          (bitmap.getWidth() - origSize) / 2, (bitmap.getHeight() - origSize) / 2,
-          origSize, origSize, m, true);
-    }
-
-    private void receivedThumbnail() {
-      trace("storing thumbnail bitmap " + nameOf(mThumbnailBitmap)
-          + " within map, key " + mPhoto);
-      mPhotoFile.addBitmapToMemoryCache(memCacheKeyFor(mPhoto), mThumbnailBitmap);
-
-      int start = mGridView.getFirstVisiblePosition();
-      for (
-          int i = start, j = mGridView.getLastVisiblePosition();
-          i <= j; i++) {
-        PhotoInfo itemPhoto = (PhotoInfo) mGridView.getItemAtPosition(i);
-        if (mPhoto.getId() == itemPhoto.getId()) {
-          View view = mGridView.getChildAt(i - start);
-          mGridView.getAdapter().getView(i, view, mGridView);
-          break;
-        }
-      }
-      // We're no longer requesting a thumbnail for this photo
-      mThumbnailRequestedSet.remove(mPhoto.getId());
-      trace("thumbnail requested set now " + d(mThumbnailRequestedSet, false));
-    }
-
-    private PhotoInfo mPhoto;
-    private Bitmap mOriginalBitmap;
-    private Bitmap mThumbnailBitmap;
-  }
-
-  private String memCacheKeyFor(PhotoInfo photo) {
-    return "thumbnail_" + photo.getId();
-  }
-
-  private void assertBgndThread() {
-    if (!isUIThread())
-      return;
-    throw new IllegalStateException("Attempt to call from non-bgnd thread " + nameOf(Thread.currentThread()));
   }
 
   private class ImageAdapter extends BaseAdapter {
@@ -268,38 +177,38 @@ public class AlbumActivity extends Activity implements Observer {
     public View getView(int position, View convertView, ViewGroup parent) {
       trace("getView for position " + position + ", convertView " + nameOf(convertView, false));
       ImageView imageView;
+      AdapterImageViewHolder holder;
       if (convertView == null) {
         // if it's not recycled, initialize some attributes
         imageView = new ImageView(context());
         imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
         trace("getView position " + position + " =>    built " + nameOf(imageView));
+
+        holder = new AdapterImageViewHolder();
+        holder.imageView = imageView;
+        imageView.setTag(holder);
       } else {
         imageView = (ImageView) convertView;
-        // Dispose of any old bitmap
-        imageView.setImageBitmap(null);
+        holder = (AdapterImageViewHolder) imageView.getTag();
+        holder.imageView = imageView;
         trace("getView position " + position + " => existing " + nameOf(imageView));
       }
       final PhotoInfo photo = getPhoto(position);
 
-      // If thumbnail exists for this photo, use it;
-      // otherwise, build it asynchronously and refresh this item when it's available
-      Bitmap bitmap = mPhotoFile.getBitmapFromMemCache(memCacheKeyFor(photo));
-      if (bitmap != null) {
-        trace("using existing thumbnail " + nameOf(bitmap, false));
-        imageView.setImageBitmap(bitmap);
-      } else {
-        trace("getView position:" + position + ", no thumbnail found");
-        // If we're already requesting a thumbnail for this photo, ignore
-        if (mThumbnailRequestedSet.add(photo.getId())) {
-          trace("requesting bitmap for this view, to construct thumbnail; set now " + d(mThumbnailRequestedSet, false));
-          // Ask photo file for (full size) bitmap, and when it's returned, we'll construct a thumbnail
-          mPhotoFile.getBitmap(AlbumActivity.this, photo);
-        }
-        // Simplify this by passing a continuation block (to be executed on the UI thread)
-      }
+      Picasso.with(AlbumActivity.this).load(mPhotoFile.tempGetPhotoPath(photo.getId())).transform(
+          getThumbnailTransform()).into(
+          holder.imageView);
       return imageView;
     }
+  }
 
+  /**
+   * Object stored in ImageView's tag field, so asynchronously loaded images that are stale
+   * do not get stored to views that have been recycled to hold other images
+   * (document this pattern later, after tracking down some examples in the web)
+   */
+  private static class AdapterImageViewHolder {
+    ImageView imageView;
   }
 
   public void setTrace(boolean state) {
@@ -318,12 +227,43 @@ public class AlbumActivity extends Activity implements Observer {
     }
   }
 
+  private Transformation getThumbnailTransform() {
+    if (mThumbnailTransform == null)
+      mThumbnailTransform = new Transformation() {
+        @Override
+        public Bitmap transform(Bitmap bitmap) {
+          int origWidth = (int) (bitmap.getWidth() * .8f);
+          int origHeight = (int) (bitmap.getHeight() * .8f);
+          int origSize = Math.min(origWidth, origHeight);
+          float scaleFactor = mThumbSize.x / (float) origSize;
+          Matrix m = new Matrix();
+
+          pr("transforming bitmap for thumbnail..., " + nameOf(bitmap));
+          sleepFor(300);
+
+          m.postScale(scaleFactor, scaleFactor);
+          Bitmap thumbnailBitmap = Bitmap.createBitmap(bitmap,
+              (bitmap.getWidth() - origSize) / 2, (bitmap.getHeight() - origSize) / 2,
+              origSize, origSize, m, true);
+          bitmap.recycle();
+          UITools.tagBitmap(thumbnailBitmap);
+          return thumbnailBitmap;
+        }
+
+        @Override
+        public String key() {
+          return "thumb";
+        }
+      };
+    return mThumbnailTransform;
+  }
+
+  private Transformation mThumbnailTransform;
   private boolean mResumed;
   private IPoint mThumbSize;
   private boolean mTrace;
   private PhotoFile mPhotoFile;
   private GridView mGridView;
   private List<PhotoInfo> mPhotos = new ArrayList();
-  private Set<Integer> mThumbnailRequestedSet = new HashSet();
   private Bundle mSavedInstanceState;
 }

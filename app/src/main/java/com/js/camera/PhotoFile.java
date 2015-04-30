@@ -4,7 +4,6 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Environment;
-import android.util.LruCache;
 
 import com.js.basic.Files;
 import com.js.basic.IPoint;
@@ -82,7 +81,6 @@ public class PhotoFile extends Observable {
       switch (stageNumber) {
         case 0: {
           trace("OpenFile");
-          openMemoryBitmapCache();
 
           if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
             mFailMessage = "No writable external storage found";
@@ -728,61 +726,11 @@ public class PhotoFile extends Observable {
     }
   }
 
-  /**
-   * Construct an LruCache for bitmaps.  Called from OpenPhotoFileTask, hence thread safe
-   */
-  private void openMemoryBitmapCache() {
-    // Get max available VM memory, exceeding this amount will throw an
-    // OutOfMemory exception. Stored in kilobytes as LruCache takes an
-    // int in its constructor.
-    final int maxMemory = (int) (Runtime.getRuntime().maxMemory() / 1024);
-
-    // Use 1/8th of the available memory for this memory cache.
-    int cacheSize = maxMemory / 8;
-
-    trace("openMemoryBitmapCache, maxMemory=" + maxMemory + " cacheSize=" + cacheSize);
-    if (false) {
-      warning("using small cache size");
-      cacheSize = Math.min(cacheSize, 3000);
-    }
-
-    mMemoryCache = new LruCache<String, Bitmap>(cacheSize) {
-      @Override
-      protected int sizeOf(String key, Bitmap bitmap) {
-        // The cache size will be measured in kilobytes rather than
-        // number of items.
-        return bitmap.getByteCount() / 1024;
-      }
-    };
-  }
-
-  /**
-   * Add a bitmap to the LruCache, if it isn't already in it; threadsafe
-   */
-  public void addBitmapToMemoryCache(String key, Bitmap bitmap) {
-    if (getBitmapFromMemCache(key) == null) {
-      trace("addBitmapToMemoryCache " + key + " => " + nameOf(bitmap));
-      mMemoryCache.put(key, bitmap);
-    }
-  }
-
-  /**
-   * Get bitmap from the LruCache; threadsafe
-   *
-   * @return bitmap, or null
-   */
-  public Bitmap getBitmapFromMemCache(String key) {
-    Bitmap bitmap = mMemoryCache.get(key);
-    trace("getBitmapFromCache " + key + " => " + nameOf(bitmap));
-    return bitmap;
-  }
-
   private boolean mTrace;
   private State mState;
   private String mFailureMessage;
   // This is a constant once the file has been created, so thread doesn't matter
   private int mRandomSeed;
-  private LruCache<String, Bitmap> mMemoryCache;
 
   // These fields should only be accessed by the background thread
   private File mRootDirectory;

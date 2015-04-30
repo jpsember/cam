@@ -5,7 +5,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.TypedValue;
@@ -14,6 +16,8 @@ import android.view.View;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.AbsListView;
 import android.widget.LinearLayout;
+
+import com.js.basic.IPoint;
 
 import static com.js.basic.Tools.*;
 
@@ -306,6 +310,31 @@ public final class UITools {
     return sConfiguration != null;
   }
 
+  public static void tagBitmap(Bitmap bitmap) {
+    if (!bitmap.isMutable()) {
+      warning("attempt to tag immutable bitmap");
+      return;
+    }
+    Canvas canvas = new Canvas(bitmap);
+    Paint p = new Paint();
+    p.setStyle(Paint.Style.FILL);
+    p.setColor(debugColor());
+    IPoint tagLoc = new IPoint(50, 50);
+    int size = 50;
+    int padding = 5;
+    canvas.drawRect(tagLoc.x, tagLoc.y, tagLoc.x + size, tagLoc.y + size, p);
+
+    p.setColor(Color.WHITE);
+    p.setTextSize(size - 2 * padding);
+    int tagCounter;
+    synchronized (UITools.class) {
+      tagCounter = sTagCounter;
+      sTagCounter++;
+    }
+    canvas.drawText("" + tagCounter, tagLoc.x + size / 2 - p.getTextSize() * .4f, tagLoc.y + size - padding, p);
+  }
+
+  private static int sTagCounter;
   private static Configuration sConfiguration;
   private static DisplayMetrics sDisplayMetrics;
   private static int sDebugColorIndex;
