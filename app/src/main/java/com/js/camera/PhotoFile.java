@@ -536,6 +536,7 @@ public class PhotoFile extends Observable {
   }
 
   public void loadBitmapIntoView(Context context, PhotoInfo photo, Integer thumbSize, ImageView target) {
+    unimp("consider using skipCache option for non-thumbnails");
     Picasso.with(context).load(
         getPhotoBitmapPath(photo.getId(), false)).transform(
         new OurTransformation(context, photo, thumbSize != null, thumbSize != null ? thumbSize : -1))

@@ -15,8 +15,6 @@ import android.widget.ImageView;
 
 import android.widget.LinearLayout;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 import com.js.android.UITools;
 
 import java.util.List;
@@ -174,12 +172,6 @@ public class ViewPhotoActivity extends Activity implements Observer {
       case StateChanged:
         addPhotoPagesIfPhotosReady();
         break;
-      case BitmapConstructed: {
-        PhotoInfo photo = (PhotoInfo) params[1];
-        Bitmap bitmap = (Bitmap) params[2];
-        adapter().bitmapArrived(photo, bitmap);
-      }
-      break;
     }
   }
 
@@ -223,49 +215,59 @@ public class ViewPhotoActivity extends Activity implements Observer {
     @Override
     public void initView(View v, Integer photoId, int position) {
       ImageView view = (ImageView) v;
-      mViewToPhotoIdBiMap.forcePut(view, photoId);
-      view.setImageBitmap(null);
-
-      // This clunky code seems to be the best way to get the 'current' view
-      view.setTag(buildTagForPosition(position));
+      ViewHolder holder = new ViewHolder(position);
+      holder.mPhotoId = photoId;
+      holder.mImageView = view;
+      view.setTag(holder);
 
       PhotoInfo info = mPhotoFile.getPhoto(photoId);
       if (info == null) {
         warning("no photo id " + photoId + " found");
         return;
       }
-
-      // Attempt to load bitmap for this photo
-      unimp("use same pattern as in Album to determine target view");
-      mPhotoFile.loadBitmapIntoView(ViewPhotoActivity.this, info, null,
-          mViewToPhotoIdBiMap.inverse().get(info.getId()));
-    }
-
-    public void bitmapArrived(PhotoInfo photoInfo, Bitmap bitmap) {
-      ImageView view = mViewToPhotoIdBiMap.inverse().get(photoInfo.getId());
-      if (view == null) {
-        warning("no view corresponding to " + photoInfo);
-        return;
-      }
-      view.setImageBitmap(bitmap);
+      mPhotoFile.loadBitmapIntoView(ViewPhotoActivity.this, info, null, holder.mImageView);
     }
 
     public PhotoInfo getCurrentPhoto() {
-      ImageView view = (ImageView) mPager.findViewWithTag(buildTagForPosition(mPager.getCurrentItem()));
-      if (view == null) throw new IllegalStateException();
-      Integer id = mViewToPhotoIdBiMap.get(view);
-      if (id == null) throw new IllegalStateException();
-      return mPhotoFile.getPhoto(id);
-    }
-
-    private String buildTagForPosition(int position) {
-      return "" + position;
+      ViewHolder seek = new ViewHolder(mPager.getCurrentItem());
+      ImageView view = (ImageView) mPager.findViewWithTag(seek);
+      if (view == null)
+        throw new IllegalStateException();
+      ViewHolder holder = (ViewHolder) view.getTag();
+      return mPhotoFile.getPhoto(holder.mPhotoId);
     }
   }
 
+  /**
+   * See http://developer.android.com/training/improving-layouts/smooth-scrolling.html#ViewHolder
+   */
+  private static class ViewHolder {
+
+    /**
+     * Construct ViewHolder; these are uniquely identified by their position fields
+     */
+    public ViewHolder(int position) {
+      mPosition = position;
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      if (other == null) return false;
+      if (!(other instanceof ViewHolder)) return false;
+      return mPosition == ((ViewHolder) other).mPosition;
+    }
+
+    @Override
+    public int hashCode() {
+      return mPosition;
+    }
+
+    ImageView mImageView;
+    int mPhotoId;
+    int mPosition;
+  }
+
   private ViewPager mPager;
-  // Bidirectional map to determine view <=> photo correspondence
-  private BiMap<ImageView, Integer> mViewToPhotoIdBiMap = HashBiMap.create();
   private PhotoFile mPhotoFile;
   private ViewGroup mButtons;
   private int mFocusPhotoId;
