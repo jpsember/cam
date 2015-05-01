@@ -541,7 +541,7 @@ public class PhotoFile extends Observable {
    */
   public void loadBitmapIntoView(Context context, PhotoInfo photo, int thumbnailSize, ImageView target) {
     RequestCreator r = Picasso.with(context).load(getPhotoBitmapPath(photo.getId(), false));
-    if (thumbnailSize == 0) //|| warning("always cache"))
+    if (thumbnailSize == 0) //|| (UITools.isPortrait() && warning("always cache")))
       r.memoryPolicy(MemoryPolicy.NO_CACHE);
     r.transform(new OurTransformation(context, photo, thumbnailSize));
     r.into(target);
@@ -584,7 +584,7 @@ public class PhotoFile extends Observable {
             origSize, origSize, matrix, true);
         if (bitmap != thumbnailBitmap) {
           bitmap.recycle();
-          UITools.tagBitmap(thumbnailBitmap);
+//          UITools.tagBitmap(thumbnailBitmap);
           bitmap = thumbnailBitmap;
         }
       }
