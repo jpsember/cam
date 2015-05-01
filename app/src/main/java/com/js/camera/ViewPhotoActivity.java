@@ -217,7 +217,6 @@ public class ViewPhotoActivity extends Activity implements Observer {
       ImageView view = (ImageView) v;
       ViewHolder holder = new ViewHolder(position);
       holder.mPhotoId = photoId;
-      holder.mImageView = view;
       view.setTag(holder);
 
       PhotoInfo info = mPhotoFile.getPhoto(photoId);
@@ -225,7 +224,7 @@ public class ViewPhotoActivity extends Activity implements Observer {
         warning("no photo id " + photoId + " found");
         return;
       }
-      mPhotoFile.loadBitmapIntoView(ViewPhotoActivity.this, info, null, holder.mImageView);
+      mPhotoFile.loadBitmapIntoView(ViewPhotoActivity.this, info, 0, view);
     }
 
     public PhotoInfo getCurrentPhoto() {
@@ -262,7 +261,6 @@ public class ViewPhotoActivity extends Activity implements Observer {
       return mPosition;
     }
 
-    ImageView mImageView;
     int mPhotoId;
     int mPosition;
   }

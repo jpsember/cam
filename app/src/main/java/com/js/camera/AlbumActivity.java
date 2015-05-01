@@ -33,7 +33,7 @@ public class AlbumActivity extends Activity implements Observer {
     super.onCreate(savedInstanceState);
     doNothingAndroid();
     AppState.prepare(this);
-//    setTrace(true);
+//   if (warning("tracing")) setTrace(true);
 
     mPhotoFile = AppState.photoFile(this);
     setContentView(buildContentView());
@@ -51,7 +51,6 @@ public class AlbumActivity extends Activity implements Observer {
   protected void onResume() {
     mResumed = true;
     trace("onResume");
-//    showFreeMemory(this,"Resuming AlbumActivity");
     super.onResume();
     mPhotoFile.addObserver(this);
     rebuildAlbumIfPhotosAvailable();
@@ -166,41 +165,24 @@ public class AlbumActivity extends Activity implements Observer {
       return AlbumActivity.this;
     }
 
-    // create a new ImageView for each item referenced by the Adapter
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
       trace("getView for position " + position + ", convertView " + nameOf(convertView, false));
       ImageView imageView;
-      AdapterImageViewHolder holder;
       if (convertView == null) {
         // if it's not recycled, initialize some attributes
         imageView = new ImageView(context());
         imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
         trace("getView position " + position + " =>    built " + nameOf(imageView));
-
-        holder = new AdapterImageViewHolder();
-        holder.imageView = imageView;
-        imageView.setTag(holder);
         imageView.setLayoutParams(new AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, mThumbSize));
       } else {
         imageView = (ImageView) convertView;
-        holder = (AdapterImageViewHolder) imageView.getTag();
-        holder.imageView = imageView;
         trace("getView position " + position + " => existing " + nameOf(imageView));
       }
       PhotoInfo photo = getPhoto(position);
-      mPhotoFile.loadBitmapIntoView(AlbumActivity.this, photo, mThumbSize, holder.imageView);
+      mPhotoFile.loadBitmapIntoView(AlbumActivity.this, photo, mThumbSize, imageView);
       return imageView;
     }
-  }
-
-  /**
-   * Object stored in ImageView's tag field, so asynchronously loaded images that are stale
-   * do not get stored to views that have been recycled to hold other images
-   * (document this pattern later, after tracking down some examples in the web)
-   */
-  private static class AdapterImageViewHolder {
-    ImageView imageView;
   }
 
   @SuppressWarnings("UnusedDeclaration")

@@ -11,7 +11,9 @@ import com.js.android.UITools;
 import com.js.basic.Files;
 import com.js.basic.IPoint;
 import com.js.basic.JSONTools;
+import com.squareup.picasso.MemoryPolicy;
 import com.squareup.picasso.Picasso;
+import com.squareup.picasso.RequestCreator;
 import com.squareup.picasso.Transformation;
 
 import org.apache.commons.io.FileUtils;
@@ -187,7 +189,6 @@ public class PhotoFile extends Observable {
           FileUtils.copyFile(photoInfoPathOriginal, photoInfoPath);
         } catch (Throwable t) {
           warning("Failed to read or parse " + file);
-          continue;
         }
       }
     }
@@ -333,6 +334,7 @@ public class PhotoFile extends Observable {
     private String mFailMessage;
   }
 
+  @SuppressWarnings("UnusedDeclaration")
   public void close() {
     assertUIThread();
     trace("close()");
@@ -349,12 +351,14 @@ public class PhotoFile extends Observable {
       throw new IllegalStateException("File not open");
   }
 
+  @SuppressWarnings("UnusedDeclaration")
   public void setTrace(boolean state) {
     mTrace = state;
     if (state)
       warning("Turning tracing on");
   }
 
+  @SuppressWarnings("UnusedDeclaration")
   public String getFailureMessage() {
     return mFailureMessage;
   }
@@ -461,10 +465,7 @@ public class PhotoFile extends Observable {
 
   private class DeletePhotoTask extends TaskSequence {
     public DeletePhotoTask(PhotoInfo photoInfo) {
-      if (true) {
-        warning("adding delay");
-        this.addSimulatedDelays(500);
-      }
+      if (warning("adding delay")) this.addSimulatedDelays(500);
       photoInfo.assertFrozen();
       mPhotoInfo = photoInfo;
     }
@@ -473,12 +474,12 @@ public class PhotoFile extends Observable {
     protected void execute(int stageNumber) {
       switch (stageNumber) {
         case 0: {
-          File infoPath = getPhotoInfoPath(mPhotoInfo.getId(), false);
-          File bitmapPath = getPhotoBitmapPath(mPhotoInfo.getId(), false);
           if (SIMULATE_DELETE_PHOTO) {
             warning("simulating deletion of photo");
             break;
           }
+          File infoPath = getPhotoInfoPath(mPhotoInfo.getId(), false);
+          File bitmapPath = getPhotoBitmapPath(mPhotoInfo.getId(), false);
           infoPath.delete();
           bitmapPath.delete();
         }
@@ -535,26 +536,28 @@ public class PhotoFile extends Observable {
     }
   }
 
-  public void loadBitmapIntoView(Context context, PhotoInfo photo, Integer thumbSize, ImageView target) {
-    unimp("consider using skipCache option for non-thumbnails");
-    Picasso.with(context).load(
-        getPhotoBitmapPath(photo.getId(), false)).transform(
-        new OurTransformation(context, photo, thumbSize != null, thumbSize != null ? thumbSize : -1))
-        .into(target);
+  /**
+   * @param thumbnailSize if not zero, assumes thumbnail as opposed to full size
+   */
+  public void loadBitmapIntoView(Context context, PhotoInfo photo, int thumbnailSize, ImageView target) {
+    RequestCreator r = Picasso.with(context).load(getPhotoBitmapPath(photo.getId(), false));
+    if (thumbnailSize == 0) //|| warning("always cache"))
+      r.memoryPolicy(MemoryPolicy.NO_CACHE);
+    r.transform(new OurTransformation(context, photo, thumbnailSize));
+    r.into(target);
   }
 
   private class OurTransformation implements Transformation {
 
-    public OurTransformation(Context context, PhotoInfo photo, boolean thumbnail, int thumbSize) {
+    public OurTransformation(Context context, PhotoInfo photo, int thumbnailSize) {
       mContext = context;
       mPhotoInfo = photo;
-      mThumbnail = thumbnail;
-      mThumbSize = thumbSize;
+      mThumbnailSize = thumbnailSize;
     }
 
     @Override
     public Bitmap transform(Bitmap bitmap) {
-      trace("transforming " + mPhotoInfo + "; thumbnail " + mThumbnail);
+      trace("transforming " + mPhotoInfo + "; thumbnail " + forThumbnail());
       // If target age is greater than current, age the photo and reload
       if (mPhotoInfo.getTargetAgeState() > mPhotoInfo.getCurrentAgeState()) {
         warning("race condition: if simultaneous aging is occurring");
@@ -568,15 +571,13 @@ public class PhotoFile extends Observable {
       bitmap.recycle();
       bitmap = bitmap2;
 
-      if (mThumbnail) {
+      if (forThumbnail()) {
+//        if (warning("sleeping")) sleepFor(100);
         int origWidth = (int) (bitmap.getWidth() * .8f);
         int origHeight = (int) (bitmap.getHeight() * .8f);
         int origSize = Math.min(origWidth, origHeight);
-        float scaleFactor = mThumbSize / (float) origSize;
+        float scaleFactor = mThumbnailSize / (float) origSize;
         Matrix matrix = new Matrix();
-
-        sleepFor(300);
-
         matrix.postScale(scaleFactor, scaleFactor);
         Bitmap thumbnailBitmap = Bitmap.createBitmap(bitmap,
             (bitmap.getWidth() - origSize) / 2, (bitmap.getHeight() - origSize) / 2,
@@ -592,12 +593,15 @@ public class PhotoFile extends Observable {
 
     @Override
     public String key() {
-      return mThumbnail ? "thumb" : "normal";
+      return forThumbnail() ? "thumb" : "normal";
+    }
+
+    public boolean forThumbnail() {
+      return mThumbnailSize != 0;
     }
 
     private final PhotoInfo mPhotoInfo;
-    private final boolean mThumbnail;
-    private final int mThumbSize;
+    private final int mThumbnailSize;
     private final Context mContext;
   }
 

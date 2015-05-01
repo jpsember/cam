@@ -236,8 +236,9 @@ public final class Tools {
    *
    * @param warningMessage message to display with warning
    */
-  public static void warning(String warningMessage) {
+  public static boolean warning(String warningMessage) {
     warning(warningMessage, 1);
+    return true;
   }
 
   /**
