@@ -17,20 +17,16 @@ public class PhotoAger {
    * Construct an ager for a photo
    */
   public PhotoAger(PhotoInfo photoInfo, byte[] currentJPEG) {
-    photoInfo.assertFrozen();
     mPhotoInfo = photoInfo;
     mCurrentJPEG = currentJPEG;
   }
 
   public byte[] getAgedJPEG() {
-    if (mAgedPhotoInfo == null)
+    if (!mAged) {
       constructAgedPhoto();
+      mAged = true;
+    }
     return mCurrentJPEG;
-  }
-
-  public PhotoInfo getAgedInfo() {
-    getAgedJPEG();
-    return mAgedPhotoInfo;
   }
 
   private IPoint calcSizeForAge(int ageState) {
@@ -63,17 +59,14 @@ public class PhotoAger {
   }
 
   private void constructAgedPhoto() {
-    mAgedPhotoInfo = mPhotoInfo;
 
-    while (mAgedPhotoInfo.getTargetAgeState() > mAgedPhotoInfo.getCurrentAgeState()) {
+    while (mPhotoInfo.getTargetAgeState() > mPhotoInfo.getCurrentAgeState()) {
       Bitmap bitmap = BitmapFactory.decodeByteArray(mCurrentJPEG, 0, mCurrentJPEG.length);
       if (bitmap == null)
         die("Failed to decode jpeg");
       mIsPortrait = BitmapTools.getOrientation(bitmap) == BitmapTools.ORIENTATION_PORTRAIT;
 
-      int newAge = mAgedPhotoInfo.getCurrentAgeState() + 1;
-      PhotoInfo newInfo = mutableCopyOf(mAgedPhotoInfo);
-      newInfo.setCurrentAgeState(newAge);
+      int newAge = mPhotoInfo.getCurrentAgeState() + 1;
 
       // Scale bitmap to new size
       IPoint newSize = calcSizeForAge(newAge);
@@ -83,7 +76,7 @@ public class PhotoAger {
 
       // Bleach out the colors a bit
       {
-        float origScale = calcColorScaleForAge(mAgedPhotoInfo.getCurrentAgeState());
+        float origScale = calcColorScaleForAge(mPhotoInfo.getCurrentAgeState());
         float newScale = calcColorScaleForAge(newAge);
         if (origScale > 0) {
           float colorScale = newScale / origScale;
@@ -98,13 +91,13 @@ public class PhotoAger {
       // Convert back to JPEG array of bytes
       mCurrentJPEG = BitmapTools.encodeJPEG(bitmap, calcJPEGQualityForAge(newAge));
       bitmap.recycle();
-      mAgedPhotoInfo = frozen(newInfo);
+      mPhotoInfo.setCurrentAgeState(newAge);
     }
   }
 
   private PhotoInfo mPhotoInfo;
   private boolean mIsPortrait;
   private byte[] mCurrentJPEG;
-  private PhotoInfo mAgedPhotoInfo;
+  private boolean mAged;
 
 }

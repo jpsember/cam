@@ -11,7 +11,7 @@ import static com.js.basic.Tools.*;
 /**
  * Information about a photo, including when it was created, and its current age state
  */
-public class PhotoInfo extends Freezable.Mutable {
+public class PhotoInfo {
 
   private static final int LOGICAL_PORTRAIT_WIDTH = 480;
   private static final int LOGICAL_PORTRAIT_HEIGHT = 640;
@@ -30,16 +30,6 @@ public class PhotoInfo extends Freezable.Mutable {
   }
 
   public static final int AGE_STATE_MAX = 12;
-
-  @Override
-  public Freezable getMutableCopy() {
-    PhotoInfo p = new PhotoInfo();
-    p.mCreationTime = mCreationTime;
-    p.mCurrentAgeState = mCurrentAgeState;
-    p.mTargetAgeState = mTargetAgeState;
-    p.mId = mId;
-    return p;
-  }
 
   private PhotoInfo() {
   }
@@ -67,7 +57,6 @@ public class PhotoInfo extends Freezable.Mutable {
    * Set the time this photo was created
    */
   public void setCreationTime(int secondsSinceEpoch) {
-    mutate();
     mCreationTime = secondsSinceEpoch;
   }
 
@@ -76,7 +65,6 @@ public class PhotoInfo extends Freezable.Mutable {
   }
 
   public void setCurrentAgeState(int ageState) {
-    mutate();
     mCurrentAgeState = ageState;
   }
 
@@ -87,7 +75,6 @@ public class PhotoInfo extends Freezable.Mutable {
   public void setTargetAgeState(int ageState) {
     if (ageState < mCurrentAgeState)
       throw new IllegalArgumentException();
-    mutate();
     mTargetAgeState = ageState;
   }
 
@@ -99,7 +86,6 @@ public class PhotoInfo extends Freezable.Mutable {
    * Set photo's id.  These are positive integers
    */
   public void setId(int id) {
-    mutate();
     if (id <= 0)
       throw new IllegalArgumentException("Photo id must be positive");
     mId = id;
@@ -118,7 +104,6 @@ public class PhotoInfo extends Freezable.Mutable {
   }
 
   public String toJSON() {
-    assertFrozen();
     if (mJSON == null) {
       synchronized (this) {
         if (mJSON == null) {
@@ -145,7 +130,6 @@ public class PhotoInfo extends Freezable.Mutable {
     p.setCreationTime(map.getInt("created"));
     p.setCurrentAgeState(map.getInt("currentstate"));
     p.setTargetAgeState(map.getInt("desiredstate"));
-    p.freeze();
     return p;
   }
 

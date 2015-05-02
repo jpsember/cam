@@ -7,7 +7,6 @@ import android.graphics.Matrix;
 import android.os.Environment;
 import android.widget.ImageView;
 
-import com.js.android.UITools;
 import com.js.basic.Files;
 import com.js.basic.IPoint;
 import com.js.basic.JSONTools;
@@ -267,10 +266,8 @@ public class PhotoFile extends Observable {
           }
 
           if (targetAge > photo.getTargetAgeState()) {
-            photo = mutableCopyOf(photo);
             photo.setTargetAgeState(targetAge);
             trace("updating");
-            photo.freeze();
             try {
               writePhotoInfo(photo);
             } catch (IOException e) {
@@ -466,7 +463,6 @@ public class PhotoFile extends Observable {
   private class DeletePhotoTask extends TaskSequence {
     public DeletePhotoTask(PhotoInfo photoInfo) {
       if (warning("adding delay")) this.addSimulatedDelays(500);
-      photoInfo.assertFrozen();
       mPhotoInfo = photoInfo;
     }
 
@@ -510,26 +506,18 @@ public class PhotoFile extends Observable {
     return bitmap;
   }
 
-  private void agePhoto(PhotoInfo mPhotoInfo) {
-    trace(".........aging " + mPhotoInfo + " to target " + mPhotoInfo.getTargetAgeState());
-    PhotoInfo agedPhoto = mutableCopyOf(mPhotoInfo);
-    agedPhoto.setTargetAgeState(agedPhoto.getTargetAgeState());
-    agedPhoto.freeze();
+  private void agePhoto(PhotoInfo agedPhoto) {
+    trace(".........aging " + agedPhoto + " to target " + agedPhoto.getTargetAgeState());
 
     // Read current bitmap as JPEG
-    File photoPath = getPhotoBitmapPath(mPhotoInfo.getId(), false);
+    File photoPath = getPhotoBitmapPath(agedPhoto.getId(), false);
     try {
       byte[] jpeg = FileUtils.readFileToByteArray(photoPath);
       PhotoAger ager = new PhotoAger(agedPhoto, jpeg);
       jpeg = ager.getAgedJPEG();
       FileUtils.writeByteArrayToFile(photoPath, jpeg);
-      agedPhoto = ager.getAgedInfo();
-      mPhotoInfo = agedPhoto;
-      writePhotoInfo(mPhotoInfo);
-      // Replace old version within set
-      mPhotoSet.remove(mPhotoInfo);
-      mPhotoSet.add(mPhotoInfo);
-      trace("writing aged version: " + mPhotoInfo);
+      writePhotoInfo(agedPhoto);
+      trace("writing aged version: " + agedPhoto);
     } catch (IOException e) {
       // TODO: figure out how to handle this gracefully
       die(e);
@@ -560,9 +548,10 @@ public class PhotoFile extends Observable {
       trace("transforming " + mPhotoInfo + "; thumbnail " + forThumbnail());
       // If target age is greater than current, age the photo and reload
       if (mPhotoInfo.getTargetAgeState() > mPhotoInfo.getCurrentAgeState()) {
-        warning("race condition: if simultaneous aging is occurring");
-        unimp("age photo before attempting to load from file the first time");
-        agePhoto(mPhotoInfo);
+        // Ensure that photo record and bitmap are being aged as atomic action
+        synchronized (mPhotoInfo) {
+          agePhoto(mPhotoInfo);
+        }
         bitmap.recycle();
         bitmap = readBitmapFromFile(mPhotoInfo);
       }
@@ -669,7 +658,6 @@ public class PhotoFile extends Observable {
   private PhotoInfo createPhotoInfo() throws IOException {
     PhotoInfo info = PhotoInfo.create();
     info.setId(getUniquePhotoId());
-    info.freeze();
 
     // Write photo info to file, and store in map
     writePhotoInfo(info);
