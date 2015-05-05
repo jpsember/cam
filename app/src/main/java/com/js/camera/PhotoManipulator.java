@@ -62,27 +62,28 @@ public class PhotoManipulator {
   private void applyVignette() {
     Paint paint = new Paint();
     paint.setAlpha(calcVignetteAlphaForAge());
+    int jpegIndex = (mHashValue >> HASH_SHIFT_VIGNETTE);
+    Bitmap vignetteBitmap = getVignette(jpegIndex);
+    IPoint vSize = BitmapTools.size(vignetteBitmap);
     // Vignettes are in landscape mode; if necessary, rotate to portrait
     Matrix matrix = new Matrix();
     if (isPortrait()) {
       matrix.setValues(sFlipBetweenLandscapeAndPortrait);
+      vSize = new IPoint(vSize.y, vSize.x);
     }
-
-    int jpegIndex = (mHashValue >> HASH_SHIFT_VIGNETTE);
-    Bitmap vignetteBitmap = getVignette(jpegIndex);
 
     // Flip vertically and/or horizontally, based on hash value
     int flipIndex = myMod(mHashValue >> HASH_SHIFT_VIGNETTE_FLIP, 4);
     if (0 != (flipIndex & 1)) {
       Matrix matrix2 = new Matrix();
       matrix2.postScale(-1, 1);
-      matrix2.postTranslate(vignetteBitmap.getWidth(), 0);
+      matrix2.postTranslate(vSize.x, 0);
       matrix.postConcat(matrix2);
     }
     if (0 != (flipIndex & 2)) {
       Matrix matrix2 = new Matrix();
       matrix2.postScale(1, -1);
-      matrix2.postTranslate(0, vignetteBitmap.getHeight());
+      matrix2.postTranslate(0, vSize.y);
       matrix.postConcat(matrix2);
     }
     mCanvas.drawBitmap(vignetteBitmap, matrix, paint);
