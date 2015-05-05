@@ -43,7 +43,7 @@ public class PhotoFile extends Observable {
   private static final boolean DELETE_ROOT_DIRECTORY = false;
 
   // For development purposes, keep copies of original (unaged) photos
-  private static final boolean KEEP_ORIGINAL_COPIES = true;
+  private static final boolean KEEP_ORIGINAL_COPIES = false;
 
   // For development purposes, start with unaged versions
   private static final boolean START_WITH_ORIGINAL = false;
@@ -53,7 +53,7 @@ public class PhotoFile extends Observable {
 
   private static final int PHOTO_LIFETIME_DAYS = 30;
 
-  private static final boolean SIMULATE_DELETE_PHOTO = true;
+  private static final boolean SIMULATE_DELETE_PHOTO = false;
 
   public static enum Event {
     StateChanged,
@@ -461,7 +461,6 @@ public class PhotoFile extends Observable {
 
   private class DeletePhotoTask extends TaskSequence {
     public DeletePhotoTask(PhotoInfo photoInfo) {
-      if (warning("adding delay")) this.addSimulatedDelays(500);
       mPhotoInfo = photoInfo;
     }
 
@@ -560,7 +559,6 @@ public class PhotoFile extends Observable {
       bitmap = bitmap2;
 
       if (forThumbnail()) {
-//        if (warning("sleeping")) sleepFor(100);
         int origWidth = (int) (bitmap.getWidth() * .8f);
         int origHeight = (int) (bitmap.getHeight() * .8f);
         int origSize = Math.min(origWidth, origHeight);
@@ -572,7 +570,6 @@ public class PhotoFile extends Observable {
             origSize, origSize, matrix, true);
         if (bitmap != thumbnailBitmap) {
           bitmap.recycle();
-//          UITools.tagBitmap(thumbnailBitmap);
           bitmap = thumbnailBitmap;
         }
       }
