@@ -58,7 +58,6 @@ public class PhotoFile extends Observable {
   public static enum Event {
     StateChanged,
     PhotoCreated,
-    BitmapConstructed,
     PhotoDeleted,
   }
 
