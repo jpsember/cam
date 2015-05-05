@@ -67,6 +67,12 @@ public class PhotoFile extends Observable {
 //    setTrace(true);
     doNothing();
     doNothingAndroid();
+    mPhotoSet = new TreeSet<PhotoInfo>(new Comparator<PhotoInfo>() {
+      @Override
+      public int compare(PhotoInfo i1, PhotoInfo i2) {
+        return i1.getId() - i2.getId();
+      }
+    });
   }
 
   public enum State {
@@ -193,12 +199,7 @@ public class PhotoFile extends Observable {
     }
 
     private void readPhotoRecords() {
-      SortedSet<PhotoInfo> photoSet = new TreeSet<PhotoInfo>(new Comparator<PhotoInfo>() {
-        @Override
-        public int compare(PhotoInfo i1, PhotoInfo i2) {
-          return i1.getId() - i2.getId();
-        }
-      });
+      mPhotoSet.clear();
 
       File[] fList = mRootDirectory.listFiles();
       if (START_WITH_ORIGINAL) {
@@ -235,10 +236,9 @@ public class PhotoFile extends Observable {
             warning("Failed to read or parse " + file);
             continue;
           }
-          photoSet.add(photoInfo);
+          mPhotoSet.add(photoInfo);
         }
       }
-      mPhotoSet = photoSet;
     }
 
     private void updatePhotoAges() {
@@ -447,7 +447,7 @@ public class PhotoFile extends Observable {
   }
 
   public List<PhotoInfo> getPhotos(int startId, int maxCount) {
-    ArrayList<PhotoInfo> list = new ArrayList();
+    ArrayList<PhotoInfo> list = new ArrayList<PhotoInfo>();
     PhotoInfo sentinel = PhotoInfo.buildSentinel(startId);
     synchronized (mPhotoSet) {
       SortedSet<PhotoInfo> view = mPhotoSet.tailSet(sentinel);
@@ -750,5 +750,5 @@ public class PhotoFile extends Observable {
   private File mRootDirectory;
   private boolean mModified;
   private int mNextPhotoId = 1;
-  private SortedSet<PhotoInfo> mPhotoSet;
+  private final SortedSet<PhotoInfo> mPhotoSet;
 }
